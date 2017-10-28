@@ -1,6 +1,6 @@
 {
   "name": "redux-shapeshifter-middleware",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Redux middleware for empowering your actions using `axios` and `qs` libraries combined.",
   "main": "./build/redux-shapeshifter-middleware.min.js",
   "author": "Alejandro Andersson <alejandro.andersson@hyperisland.se>",
@@ -27,7 +27,15 @@
     "redux-middleware",
     "action",
     "actions",
-    "redux-store"
+    "redux-store",
+    "generator-action",
+    "generator-redux",
+    "generator",
+    "axios-action",
+    "ajax-action",
+    "http-action",
+    "ajax",
+    "http"
   ],
   "files": [
     "build/redux-shapeshifter-middleware.min.js"
