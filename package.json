@@ -1,6 +1,6 @@
 {
   "name": "redux-shapeshifter-middleware",
-  "version": "0.0.1-rc2",
+  "version": "0.0.1-rc3",
   "description": "Redux middleware for empowering your actions using `axios` and `qs` libraries combined.",
   "main": "./build/redux-shapeshifter-middleware.min.js",
   "author": "Alejandro Andersson <alejandro.andersson@hyperisland.se>",
@@ -30,7 +30,7 @@
     "redux-store"
   ],
   "files": [
-    "build/redux-shapeshifter.middleware.min.js"
+    "build/redux-shapeshifter-middleware.min.js"
   ],
   "dependencies": {
     "axios": "^0.17.0",
