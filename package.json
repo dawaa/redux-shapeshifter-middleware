@@ -5,12 +5,12 @@
   "main": "./build/redux-shapeshifter-middleware.min.js",
   "author": "Alejandro Andersson <alejandro.andersson@hyperisland.se>",
   "repository": {
-      "type": "git",
-      "url": "https://github.com/dawaa/redux-shapeshifter-middleware.git"
+    "type": "git",
+    "url": "https://github.com/dawaa/redux-shapeshifter-middleware.git"
   },
   "homepage": "https://github.com/dawaa/redux-shapeshifter-middleware",
   "bugs": {
-      "url": "https://github.com/dawaa/redux-shapeshifter-middleware/issues"
+    "url": "https://github.com/dawaa/redux-shapeshifter-middleware/issues"
   },
   "license": "MIT",
   "scripts": {
@@ -21,24 +21,27 @@
     "build:prod:umd": "cross-env BABEL_ENV=commonjs NODE_ENV=production webpack"
   },
   "keywords": [
-      "redux",
-      "shapeshifter",
-      "middleware",
-      "redux-middleware",
-      "action",
-      "actions",
-      "redux-store"
+    "redux",
+    "shapeshifter",
+    "middleware",
+    "redux-middleware",
+    "action",
+    "actions",
+    "redux-store"
   ],
   "files": [
-      "build/redux-shapeshifter.middleware.min.js"
+    "build/redux-shapeshifter.middleware.min.js"
   ],
+  "dependencies": {
+    "axios": "^0.17.0",
+    "qs": "^6.5.1"
+  },
   "peerDependencies": {
     "axios": ">= 0.17",
     "qs": "^6.5.1"
   },
   "devDependencies": {
     "axios": "^0.17.0",
-    "axios-mock-adapter": "^1.9.0",
     "babel-cli": "^6.26.0",
     "babel-loader": "^7.1.2",
     "babel-plugin-transform-es2015-destructuring": "^6.23.0",
@@ -47,12 +50,10 @@
     "babel-polyfill": "^6.26.0",
     "babel-preset-env": "^1.6.1",
     "chai": "^4.1.2",
-    "chai-as-promised": "^7.1.1",
     "cross-env": "^5.1.0",
     "i": "^0.3.6",
     "mocha": "^4.0.1",
     "npm": "^5.5.1",
-    "qs": "^6.5.1",
     "sinon": "^4.0.2",
     "webpack": "^3.8.1"
   }

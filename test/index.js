@@ -2,9 +2,6 @@
 import chai           from 'chai'
 import sinon          from 'sinon'
 import axios          from 'axios'
-import chaiAsPromised from 'chai-as-promised'
-
-chai.use( chaiAsPromised )
 
 // internal
 import { isGeneratorFn } from '../src/generator'
