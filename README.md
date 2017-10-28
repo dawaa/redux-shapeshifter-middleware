@@ -42,7 +42,9 @@ const shapeshifterOpts = {
      *  Tells the middleware what action type it should act on
      * 
      * constants.API_ERROR
-     *  If back-end responds with an error or call didn't go through, middleware will emit 'API_ERROR'.. Unless you specified your own custom 'failure'-method within the 'payload'-key in your action.
+     *  If back-end responds with an error or call didn't go through,
+     *  middleware will emit 'API_ERROR'.. Unless you specified your own
+     *  custom 'failure'-method within the 'payload'-key in your action.
      *  ```
      *  return {
      *      type: API_ERROR,
@@ -149,7 +151,8 @@ const success = function* (type, payload, { dispatch, state }) {
     
     dispatch({ type: 'MY_NAME_IS_WHAT', name: myName })
     
-    // Conditionally if we want to emit to the system that the call is done.
+    // Conditionally if we want to emit to the
+    // system that the call is done.
     return {
         type
     }
