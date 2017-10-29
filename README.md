@@ -107,7 +107,7 @@ This property and its value is what actually defines the API call we want to mak
     })
 }
 
-or.. if you're a fan of destructuring
+// or.. if you're a fan of destructuring
 
 {
     type: 'API',
@@ -155,7 +155,7 @@ This would ultimately result in the success call e.g. be called like this `succe
 ```js
 const success = (type, payload, meta, store) => ({
     type,
-    statement: `Heelies are so cool -- ${ meta.passInRandomStuff.heeliesAreCool }
+    statement: `Heelies are so cool -- ${ meta.passInRandomStuff.heeliesAreCool }`
 })
 
 const deleteUserByEmail = email => ({
