@@ -81,10 +81,127 @@ const store = createStore(
     )
 )
 ```
+## Action properties
+We will explore what properties there are to be used for our new actions..
 
+
+
+##### `type <string>`
+Nothing unusual here, just what type we send out to the system.. For the middleware to pick it up, a classy 'API' would do, unless you specified otherwise in the set up of shapeshifter.
+
+```js
+{
+    type: 'API' // or API if you're using a constant
+}
+```
+
+##### `payload <function>`
+This property and its value is what actually defines the API call we want to make. The value must be of type 'function' and also return an object. Which we easily can do with a fat arrow function `() => ({})`.
+* store - The function receives an argument, which is the store.dispatch and also our current state, store.state.
+
+
+```js
+{
+    type: 'API',
+    payload: store => ({
+    })
+}
+
+or.. if you're a fan of destructuring
+
+{
+    type: 'API',
+    payload: ({ dispatch, state }) => ({
+    })
+}
+```
+
+_________________________
+##### Payload properties
+Acceptable properties to be used by the returned object from `payload`
+
+* `url <string>`
+* `types <array>`
+ 
+An array containing your WHATEVER_ACTION, WHATEVER_ACTION_SUCCESS and WHATEVER_ACTION_FAILED
+* `tapBeforeCall <function>`
+
+Is called before the API request is made, also the function receives an object argument.. Containing `params <object>`, `dispatch <function>`, `state <object>` and `getState <function>`
+
+
+* `success <function>`
+
+
+If the request successfully goes through and no error was returneed by the back-end. Then this function will run.
+
+`success()` is called with 3 or 4 arguments, depending on if you set a `meta` property in your action or not.
+
+`success(type, payload, store)`
+
+`success(type, payload, meta, store)`
+
+
+
+* `failure <function>`
+
+If the request fails this function will be called.
+* `tapAfterCall <function>`
+
+Same as `tapBeforeCall <function>` but is called **after** the API request was made.
+
+##### `meta <object>`
+This would ultimately result in the success call e.g. be called like this `success(type, payload, meta, store)`. Notice how the `store` is now at 4th position and not in 3rd any longer. If we don't set a `meta` property in our action the success call omits the `meta`  and instead uses `store` in its place.
+
+```js
+const success = (type, payload, meta, store) => ({
+    type,
+    statement: `Heelies are so cool -- ${ meta.passInRandomStuff.heeliesAreCool }
+})
+
+const deleteUserByEmail = email => ({
+    type: API,
+    payload: ({ state }) => ({
+        url: '/user/delete',
+        params: {
+            email
+        },
+        success
+    }),
+    meta: {
+        passInRandomStuff: {
+            heeliesAreCool: 'they are!'
+        }
+    }
+})
+```
+
+##### `meta <object> . mergeParams <boolean> : default 'false'`
+Like it states, if you have any parameters you pass to your back-end through `payload.params <object>` which you also would like to use in either the success or failure calls, you can pass in true here.
+
+```js
+const success = (type, payload, meta, store) => ({
+    type,
+    message: `User was deleted by their email.. ${ meta.params.email }`
+})
+
+const deleteUserByEmail = email => ({
+    type: API,
+    payload: ({ state }) => ({
+        url: '/user/delete',
+        params: {
+            email
+        }
+        success
+    }),
+    meta: {
+        mergeParams: true
+    }
+})
+```
 
 ## How to use?
 
+#### Normal
 A normal case where we have both dispatch and our current state for our usage.
 ```js
 // internal
@@ -124,6 +241,7 @@ export const fetchAllUsers = () => ({
 })
 ```
 
+#### Generator
 A case where we make us of a generator function.
 ```js
 // internal
