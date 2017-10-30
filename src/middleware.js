@@ -28,13 +28,40 @@ const middleware = (options) => {
     const { base, constants } = middlewareOpts;
 
     // Bail if not an API action
+    if ( action.type !== constants.API ) return next( action )
+
     // Bail if action is missing `payload` property
     // Bail if `payload` property is not a function
-    if (
-      action.type !== constants.API
-      || ! action.payload
-      || typeof action.payload !== 'function'
-    ) return next( action )
+    if ( ! action.payload || typeof action.payload !== 'function' ) {
+      
+      if ( action.types && action.types.constructor === Array ) {
+        const [ REQUEST, SUCCESS, FAILURE ] = action.types
+
+        if ( ! action.payload ) {
+          console.error(`redux-shapeshifter-middleware:
+  => ${ REQUEST } === action was called but was missing property 'payload'.`)
+          return next( action )
+        }
+
+        if ( typeof action.payload !== 'function' ) {
+          console.error(`redux-shapeshifter-middleware:
+  => ${ REQUEST } === action was called but property 'payload' was not of type function.`)
+          return next( action )
+        }
+      }
+
+      if ( ! action.payload ) {
+        console.error(`redux-shapeshifter-middleware:
+  => An API action was called but was missing property 'payload'.`)
+        return next( action )
+      }
+
+      if ( typeof action.payload !== 'function' ) {
+          console.error(`redux-shapeshifter-middleware:
+  => An API action was called but property 'payload' was not of type function.`)
+        return next( action )
+      }
+    }
 
     const payload = action.payload({ dispatch, state: getState() })
 
@@ -45,7 +72,18 @@ const middleware = (options) => {
       )
     }
 
+    if ( payload.types ) {
+      console.warn(
+        `DEPRECATED: payload.types is deprecated. Instead, move the property ` +
+        `one level up, outside of the payload function that returns an object.` +
+        `
+            The payload.types will stop working in a near future.`
+      )
+    }
+
     action.payload = payload
+
+
 
     // Everything is OK
 
@@ -54,7 +92,6 @@ const middleware = (options) => {
     const {
       method = 'get',
       payload: {
-        types: [ REQUEST, SUCCESS, FAILURE ],
         url: uris,
         params: parameters = {},
         auth,
@@ -73,6 +110,15 @@ const middleware = (options) => {
         state: getState()
       }
     } = action;
+
+    let REQUEST, SUCCESS, FAILURE;
+    if ( action.payload.types && action.payload.types.constructor === Array ) {
+      [ REQUEST, SUCCESS, FAILURE ] = action.payload.types
+    }
+
+    if ( action.types && action.types.constructor === Array ) {
+      [ REQUEST, SUCCESS, FAILURE ] = action.types
+    }
 
     // Append current logged in user's session id to the call
     if ( auth ) {

@@ -37,6 +37,9 @@ describe( 'shapeshifter middleware', () => {
   } )
 
   it ( 'should ignore API action with no payload property', () => {
+    const mock = sandbox.mock( console )
+    mock.expects( 'error' ).once()
+
     const action = {
       type: 'API',
       params: {
@@ -47,9 +50,13 @@ describe( 'shapeshifter middleware', () => {
     dispatch( action )
     chai.assert.isTrue( next.called )
     chai.assert.isTrue( next.calledWith( action ) )
+    chai.assert.isTrue( mock.verify() )
   } )
 
   it ( 'should ignore API action with payload property but not a function', () => {
+    const mock = sandbox.mock( console )
+    mock.expects( 'error' ).once()
+
     const action = {
       type: 'API',
       payload: {
@@ -60,22 +67,23 @@ describe( 'shapeshifter middleware', () => {
     dispatch( action )
     chai.assert.isTrue( next.called )
     chai.assert.isTrue( next.calledWith( action ) )
+    chai.assert.isTrue( mock.verify() )
   } )
 
   it ( 'should call action.payload() method with dispatch and state', () => {
     const payloadSpy = sinon.spy()
     const action = {
       type: 'API',
+      types: [
+        'FETCH_USER',
+        'FETCH_USER_SUCCESS',
+        'FETCH_USER_FAILED'
+      ],
       payload: (store) => {
         payloadSpy(store)
 
         return {
-          url: '/users/fetch',
-          types: [
-            'FETCH_USER',
-            'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
-          ]
+          url: '/users/fetch'
         }
       }
     }
@@ -114,13 +122,13 @@ describe( 'shapeshifter middleware', () => {
 
         const action = {
           type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
           payload: () => ({
             url: '/users/fetch',
-            types: [
-              'FETCH_USER',
-              'FETCH_USER_SUCCESS',
-              'FETCH_USER_FAILED'
-            ]
           })
         }
 
@@ -148,13 +156,13 @@ describe( 'shapeshifter middleware', () => {
 
         const action = {
           type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
           payload: () => ({
             url: '/users/fetch',
-            types: [
-              'FETCH_USER',
-              'FETCH_USER_SUCCESS',
-              'FETCH_USER_FAILED'
-            ],
             failure: (type, error) => ({
               type,
               message: 'Failed to fetch a user.',
@@ -191,13 +199,13 @@ describe( 'shapeshifter middleware', () => {
 
       const action = {
         type: 'API',
+        types: [
+          'FETCH_USER',
+          'FETCH_USER_SUCCESS',
+          'FETCH_USER_FAILED'
+        ],
         payload: () => ({
           url: '/users/fetch',
-          types: [
-            'FETCH_USER',
-            'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
-          ],
           success: (type, { user: { name } }) => ({
             type,
             firstName: name
@@ -234,17 +242,17 @@ describe( 'shapeshifter middleware', () => {
 
         const action = {
           type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
           payload: () => ({
             url: '/users/fetch',
             params: {
               username: 'dawaa',
               email: 'dawaa@heaven.com'
             },
-            types: [
-              'FETCH_USER',
-              'FETCH_USER_SUCCESS',
-              'FETCH_USER_FAILED'
-            ]
           })
         }
 
@@ -278,17 +286,17 @@ describe( 'shapeshifter middleware', () => {
 
         const action = {
           type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
           payload: () => ({
             url: '/users/fetch',
             params: {
               username: 'dawaa',
               email: 'dawaa@heaven.com'
             },
-            types: [
-              'FETCH_USER',
-              'FETCH_USER_SUCCESS',
-              'FETCH_USER_FAILED'
-            ],
             auth: true
           })
         }
@@ -326,13 +334,13 @@ describe( 'shapeshifter middleware', () => {
 
         const action = {
           type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
           payload: () => ({
             url: '/users/fetch',
-            types: [
-              'FETCH_USER',
-              'FETCH_USER_SUCCESS',
-              'FETCH_USER_FAILED'
-            ],
             success: spy,
             auth: true
           })
@@ -380,13 +388,13 @@ describe( 'shapeshifter middleware', () => {
 
         const action = {
           type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
           payload: () => ({
             url: '/users/fetch',
-            types: [
-              'FETCH_USER',
-              'FETCH_USER_SUCCESS',
-              'FETCH_USER_FAILED'
-            ],
             success: spy,
             auth: true
           }),
@@ -443,16 +451,16 @@ describe( 'shapeshifter middleware', () => {
 
         const action = {
           type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
           payload: () => ({
             url: '/users/fetch',
             params: {
               userName: 'dawaa'
             },
-            types: [
-              'FETCH_USER',
-              'FETCH_USER_SUCCESS',
-              'FETCH_USER_FAILED'
-            ],
             success: spy,
             auth: true
           }),
@@ -514,13 +522,13 @@ describe( 'shapeshifter middleware', () => {
 
         const action = {
           type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
           payload: () => ({
             url: '/users/fetch',
-            types: [
-              'FETCH_USER',
-              'FETCH_USER_SUCCESS',
-              'FETCH_USER_FAILED'
-            ],
             success: (type, { user: { name } }) => ({
               type,
               firstName: name
@@ -552,6 +560,62 @@ describe( 'shapeshifter middleware', () => {
         })
       } )
 
+      it ( 'Should run tapBeforeCall()', done => {
+        const payload  = {
+          data: {
+            user: { name: 'Alejandro' },
+            status: 200
+          }
+        }
+        const resolved = new Promise(r => r( payload ))
+        sandbox.stub( axios, 'get' ).returns( resolved )
+
+        const spy = sinon.spy()
+
+        const action = {
+          type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
+          payload: () => ({
+            url: '/users/fetch',
+            params: {
+              randomThought: 'Shower is taking a stand up bath'
+            },
+            tapBeforeCall: (store) => {
+              spy(store)
+            },
+            success: (type, { user: { name } }) => ({
+              type,
+              firstName: name
+            }),
+            auth: true
+          })
+        }
+
+        const expectedParams = {
+          params: {
+            randomThought: 'Shower is taking a stand up bath',
+            sessionid: 'abc123'
+          },
+          dispatch: store.dispatch,
+          state: store.getState(),
+          getState: store.getState
+        }
+
+        dispatch( action )
+
+
+        setTimeout(() => {
+          chai.assert.isTrue( spy.called )
+          chai.assert.isTrue( spy.calledOnce )
+          chai.assert.deepEqual( spy.args[ 0 ][ 0 ], expectedParams )
+          done()
+        })
+      } )
+
     } )
 
     describe( 'Successful API calls generators', () => {
@@ -577,13 +641,13 @@ describe( 'shapeshifter middleware', () => {
 
         const action = {
           type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
           payload: () => ({
             url: '/users/fetch',
-            types: [
-              'FETCH_USER',
-              'FETCH_USER_SUCCESS',
-              'FETCH_USER_FAILED'
-            ],
             success: function* (type, payload) {
               const string  = yield "A string"
             },
@@ -617,13 +681,13 @@ describe( 'shapeshifter middleware', () => {
 
         const action = {
           type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
           payload: () => ({
             url: '/users/fetch',
-            types: [
-              'FETCH_USER',
-              'FETCH_USER_SUCCESS',
-              'FETCH_USER_FAILED'
-            ],
             success: function* (type, { user }) {
               const fakePayload = { data: { user: { id: 1 }} }
               const response    = yield new Promise(r => r( fakePayload ))
@@ -663,13 +727,13 @@ describe( 'shapeshifter middleware', () => {
 
         const action = {
           type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
           payload: () => ({
             url: '/users/fetch',
-            types: [
-              'FETCH_USER',
-              'FETCH_USER_SUCCESS',
-              'FETCH_USER_FAILED'
-            ],
             success: function* (type, { user }, { dispatch, state }) {
               dispatch({ type: 'FETCH_AVATAR', sessionid: state.user.sessionid })
               dispatch({ type: 'FETCH_MESSAGES', id: user.id })
@@ -722,13 +786,13 @@ describe( 'shapeshifter middleware', () => {
 
         const action = {
           type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
           payload: () => ({
             url: '/users/fetch',
-            types: [
-              'FETCH_USER',
-              'FETCH_USER_SUCCESS',
-              'FETCH_USER_FAILED'
-            ],
             success: function* () {
               yield () => { throw 'Ugh' }
             },
