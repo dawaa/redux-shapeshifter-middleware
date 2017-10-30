@@ -95,6 +95,17 @@ Nothing unusual here, just what type we send out to the system.. For the middlew
 }
 ```
 
+##### `types <array>`
+An array containing your actions
+
+```
+[
+    WHATEVER_ACTION,
+    WHATEVER_ACTION_SUCCESS,
+    WHATEVER_ACTION_FAILED
+]
+```
+
 ##### `payload <function>`
 This property and its value is what actually defines the API call we want to make. The value must be of type 'function' and also return an object. Which we easily can do with a fat arrow function `() => ({})`.
 * store - The function receives an argument, which is the store.dispatch and also our current state, store.state.
@@ -121,9 +132,7 @@ _________________________
 Acceptable properties to be used by the returned object from `payload`
 
 * `url <string>`
-* `types <array>`
- 
-An array containing your WHATEVER_ACTION, WHATEVER_ACTION_SUCCESS and WHATEVER_ACTION_FAILED
+
 * `tapBeforeCall <function>`
 
 Is called before the API request is made, also the function receives an object argument.. Containing `params <object>`, `dispatch <function>`, `state <object>` and `getState <function>`
@@ -228,13 +237,13 @@ const failure = (type, error) => ({
 
 export const fetchAllUsers = () => ({
     type: API,
+    types: [
+        FETCH_ALL_USERS,
+        FETCH_ALL_USERS_SUCCESS,
+        FETCH_ALL_USERS_FAILED
+    ],
     payload: ({ dispatch, state }) => ({
         url: '/users/all',
-        types: [
-            FETCH_ALL_USERS,
-            FETCH_ALL_USERS_SUCCESS,
-            FETCH_ALL_USERS_FAILED
-        ],
         success,
         failure
     })
@@ -291,16 +300,16 @@ const failure = (type, error) => ({
 
 export const fetchAllUsers = userId => ({
     type: API,
+    types: [
+        FETCH_USER
+        FETCH_USER_SUCCESS,
+        FETCH_USER_FAILED
+    ],
     payload: ({ dispatch, state }) => ({
         url: '/fetch-user-without-their-name',
         params: {
             id: userId
         },
-        types: [
-            FETCH_USER,
-            FETCH_USER_SUCCESS,
-            FETCH_USER_FAILED
-        ],
         success,
         failure
     })
