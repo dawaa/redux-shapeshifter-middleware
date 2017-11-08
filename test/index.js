@@ -230,6 +230,7 @@ describe( 'shapeshifter middleware', () => {
 
 
     describe( 'Successful API calls', () => {
+
       it ( 'Params should match without auth proprerty', done => {
         const payload  = {
           data: {
@@ -433,6 +434,42 @@ describe( 'shapeshifter middleware', () => {
         setTimeout(() => {
           chai.assert.isTrue( spy.called )
           chai.assert.deepEqual( spy.args[ 0 ], expected )
+          done()
+        })
+      } )
+
+      it ( 'Should be fine with 204 status (empty response)', done => {
+        const payload  = {
+          data: {
+            error: null,
+            errors: null,
+            message: 'No upcoming and confirmed lessons found.',
+            status: 204
+          }
+        }
+        const resolved = new Promise(r => r(payload))
+        sandbox.stub( axios, 'get' ).returns( resolved )
+
+        const spy = sinon.spy()
+
+        const action = {
+          type: 'API',
+          types: [
+            'FETCH_NEXT_CLASS',
+            'FETCH_NEXT_CLASS_SUCCESS',
+            'FETCH_NEXT_CLASS_FAILED'
+          ],
+          payload: () => ({
+            url: '/bookings/123/nextClass',
+            success: spy,
+            auth: true
+          }),
+        }
+
+        dispatch( action )
+
+        setTimeout(() => {
+          chai.assert.isTrue( spy.called )
           done()
         })
       } )

@@ -35,7 +35,7 @@ const middleware = (options) => {
     if ( ! action.payload || typeof action.payload !== 'function' ) {
       
       if ( action.types && action.types.constructor === Array ) {
-        const [ REQUEST, SUCCESS, FAILURE ] = action.types
+        const [ REQUEST, SUCCESS, FAILURE ] = action.types
 
         if ( ! action.payload ) {
           console.error(`redux-shapeshifter-middleware:
@@ -163,7 +163,7 @@ const middleware = (options) => {
         const { data }           = response
         const { status, errors } = data
 
-        if ( status !== 200 && status !== 201 ) {
+        if ( status !== 200 && status !== 201 && status !== 204 ) {
           return Promise.reject( JSON.stringify( errors ) )
         }
 
