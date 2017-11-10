@@ -12,12 +12,18 @@ __________________
 $ npm|yarn install|add redux-shapeshifter-middleware
 ```
 #### Implementation
-A very basic implementation.
+
+##### A very basic implementation.
 ```js
 import { createStore, applyMiddleware } from 'redux'
 import shapeshifter                     from 'redux-shapeshifter-middleware'
 
-const apiMiddleware = shapeshifter({ base: 'http://api.url/v1/' })
+const apiMiddleware = shapeshifter({
+    base: 'http://api.url/v1/',
+    auth: {
+        user: 'sessionid'
+    }
+})
 
 const store = createStore(
     reducers,
@@ -28,14 +34,29 @@ const store = createStore(
     )
 )
 ```
+______________________________________________________
 
-A more detailed set up of shapeshifter.
+##### A more detailed set up of shapeshifter.
 ```js
 import { createStore, applyMiddleware } from 'redux'
 import shapeshifter                     from 'redux-shapeshifter-middleware'
 
 const shapeshifterOpts = {
     base: 'http://api.url/v1/',
+
+    /**
+     * If payload.auth is set to `true` this will kick in and add the
+     * properties added here to the API request.
+     *
+     * Note: These values will be taken from Redux store
+     */
+    auth: {
+        user: {
+            sessionid: true
+            // If you wish to make sure a property is NOT present
+            // you may pass `false` instead.
+        }
+    },
     
     /**
      * constants.API
@@ -65,9 +86,9 @@ const shapeshifterOpts = {
      *  ```
      */
     constants: {
-        API: 'API_CONSTANT', // default: 'API'
-        API_ERROR: 'API_ERROR_RESPONSE', // default: 'API_ERROR'
-        API_VOID: 'API_NO_RESPONSE' // default: 'API_VOID'
+        API       : 'API_CONSTANT', // default: 'API'
+        API_ERROR : 'API_ERROR_RESPONSE', // default: 'API_ERROR'
+        API_VOID  : 'API_NO_RESPONSE' // default: 'API_VOID'
     }
 }
 const apiMiddleware = shapeshifter( shapeshifterOpts )
@@ -86,132 +107,154 @@ We will explore what properties there are to be used for our new actions..
 
 
 
-##### `type <string>`
+#### `type <string>`
 Nothing unusual here, just what type we send out to the system.. For the middleware to pick it up, a classy 'API' would do, unless you specified otherwise in the set up of shapeshifter.
 
-```js
-{
-    type: 'API' // or API if you're using a constant
-}
+```javascript
+const anActionFn = () => ({
+    type: 'API' // or API (without quotation marks) if you're using a constant
+})
 ```
+______________________________________________________
 
-##### `types <array>`
+#### `types <array>`
 An array containing your actions
 
-```
-[
-    WHATEVER_ACTION,
-    WHATEVER_ACTION_SUCCESS,
-    WHATEVER_ACTION_FAILED
-]
-```
-
-##### `payload <function>`
-This property and its value is what actually defines the API call we want to make. The value must be of type 'function' and also return an object. Which we easily can do with a fat arrow function `() => ({})`.
-* store - The function receives an argument, which is the store.dispatch and also our current state, store.state.
-
-
-```js
-{
+```javascript
+const anActionFn = () => ({
     type: 'API',
+    types: [
+        WHATEVER_ACTION,
+        WHATEVER_ACTION_SUCCESS,
+        WHATEVER_ACTION_FAILED
+    ]
+})
+```
+
+______________________________________________________
+
+#### `payload <function>`
+* Arguments
+    * store `<object>`
+        * `#dispatch() <function>`
+        * `#state <object>`
+
+This property and its value is what actually defines the API call we want to make. 
+
+**Note**
+Payload **must** return an object. Easiest done using a fat-arrow function like below.
+
+```javascript
+const anActionFn = () => ({
+    type: 'API',
+    types: [
+        WHATEVER_ACTION,
+        WHATEVER_ACTION_SUCCESS,
+        WHATEVER_ACTION_FAILED
+    ],
     payload: store => ({
     })
-}
-
-// or.. if you're a fan of destructuring
-
-{
-    type: 'API',
-    payload: ({ dispatch, state }) => ({
-    })
-}
+    // or if you fancy destructuring
+    // payload: ({ dispatch, state }) => ({})
 ```
 
-_________________________
-##### Payload properties
+### Inside payload properties
 Acceptable properties to be used by the returned object from `payload`
 
-* `url <string>`
+```javascript
+const anActionFn = () => ({
+    type: 'API',
+    types: [
+        WHATEVER_ACTION,
+        WHATEVER_ACTION_SUCCESS,
+        WHATEVER_ACTION_FAILED
+    ],
+    payload: store => ({
+        // THESE PROPERTIES GO IN HERE <<<<<<
+    })
+```
 
-* `tapBeforeCall <function>`
+#### `url <string>`
 
+#### `tapBeforeCall <function>`
 Is called before the API request is made, also the function receives an object argument.. Containing `params <object>`, `dispatch <function>`, `state <object>` and `getState <function>`
 
+#### `success <function>`
+* Arguments
+    * `type <string>`
+    * `payload <object>`
+    * `meta|store <object>`
+        * If `meta` key is missing from the first level of the API action, then this 3rd argument will be replaced with `store`.
+    * `store <object>` -- Will be 'null' if no `meta` key was defined in the first level of the API action.
 
-* `success <function>`
+This method is run if the API call went through successfully with no errors.
 
+#### `failure <function>`
+* Arguments
+    * `type <string>`
+    * `error <mixed>`
 
-If the request successfully goes through and no error was returneed by the back-end. Then this function will run.
+This method is run if the API call responds with an error from the back-end.
 
-`success()` is called with 3 or 4 arguments, depending on if you set a `meta` property in your action or not.
-
-`success(type, payload, store)`
-
-`success(type, payload, meta, store)`
-
-
-
-* `failure <function>`
-
-If the request fails this function will be called.
-* `tapAfterCall <function>`
-
+#### `tapAfterCall <function>`
 Same as `tapBeforeCall <function>` but is called **after** the API request was made.
 
-##### `meta <object>`
-This would ultimately result in the success call e.g. be called like this `success(type, payload, meta, store)`. Notice how the `store` is now at 4th position and not in 3rd any longer. If we don't set a `meta` property in our action the success call omits the `meta`  and instead uses `store` in its place.
+#### `auth <boolean>`
+Default is **false**.
 
-```js
+If the API call is constructed with `auth: true` and the middleware set up was initialized with an `auth` key pointing to the part of the store you want to use for authorization in your API calls. Then what you set up in the initialization will be added to the requests parameters automatically for you.
+______________________________________________________
+
+
+#### `meta <object>`
+This is our jack-in-the-box prop, you can probably think of lots of cool stuff to do with this, but below I will showcase what I've used it for.
+
+Basically this allows to bridge stuff between the action and the `success()` method.
+
+**Note**
+Check `Payload > "Inside payload properties" > success()` above to understand where these meta tags will be available.
+
+```javascript
 const success = (type, payload, meta, store) => ({
-    type,
-    statement: `Heelies are so cool -- ${ meta.passInRandomStuff.heeliesAreCool }`
+    // We can from here reach anything put inside `meta` property
+    // inside the action definition.
+    type: type,
+    heeliesAreCool: meta.randomKeyHere.heeliesAreCool
 })
 
-const deleteUserByEmail = email => ({
-    type: API,
-    payload: ({ state }) => ({
-        url: '/user/delete',
+const fetchHeelies = () => ({
+    type: 'API',
+    types: [
+        FETCH_HEELIES,
+        FETCH_HEELIES_SUCCESS,
+        FETCH_HEELIES_FAILED
+    ],
+    payload: store => ({
+        url: '/fetch/heelies/',
         params: {
-            email
+            color: 'pink'
         },
-        success
+        success: success
     }),
     meta: {
-        passInRandomStuff: {
-            heeliesAreCool: 'they are!'
+        randomKeyHere: {
+            heeliesAreCool: true
         }
     }
-})
 ```
 
-##### `meta <object> . mergeParams <boolean> : default 'false'`
-Like it states, if you have any parameters you pass to your back-end through `payload.params <object>` which you also would like to use in either the success or failure calls, you can pass in true here.
+#### `meta.mergeParams <boolean>`
+Default is **false**.
 
-```js
-const success = (type, payload, meta, store) => ({
-    type,
-    message: `User was deleted by their email.. ${ meta.params.email }`
-})
+Just like this property states, it will pass anything you have under the property `payload.params` to the `meta` parameter passed to `success()` method.
 
-const deleteUserByEmail = email => ({
-    type: API,
-    payload: ({ state }) => ({
-        url: '/user/delete',
-        params: {
-            email
-        }
-        success
-    }),
-    meta: {
-        mergeParams: true
-    }
-})
-```
+______________________________________________________
 
 ## How to use?
 
-#### Normal
+### Normal function
 A normal case where we have both dispatch and our current state for our usage.
+
 ```js
 // internal
 import { API } from '__actions__/consts'
@@ -223,16 +266,16 @@ export const FETCH_ALL_USERS_FAILED  = 'API/FETCH_ALL_USERS_FAILED'
 // @param {string} type This is our _SUCCESS constant
 // @param {object} payload The response from our back-end
 const success = (type, payload) => ({
-    type,
-    users: payload.items
+    type  : type,
+    users : payload.items
 })
 
 // @param {string} type This is our _FAILED constnat
 // @param {object} error The error response from our back-end
 const failure = (type, error) => ({
-    type,
-    message: 'Failed to fetch all users.',
-    error
+    type    : type,
+    message : 'Failed to fetch all users.',
+    error   : error
 })
 
 export const fetchAllUsers = () => ({
@@ -244,14 +287,17 @@ export const fetchAllUsers = () => ({
     ],
     payload: ({ dispatch, state }) => ({
         url: '/users/all',
-        success,
-        failure
+        success: success,
+        failure: failure
     })
 })
 ```
 
-#### Generator
+______________________________________________________
+
+### Generator function
 A case where we make us of a generator function.
+
 ```js
 // internal
 import { API } from '__actions__/consts'
@@ -293,9 +339,9 @@ const success = function* (type, payload, { dispatch, state }) {
 // @param {string} type This is our _FAILED constnat
 // @param {object} error The error response from our back-end
 const failure = (type, error) => ({
-    type,
-    message: 'Failed to fetch all users.',
-    error
+    type    : type,
+    message : 'Failed to fetch all users.',
+    error   : error
 })
 
 export const fetchAllUsers = userId => ({
@@ -310,8 +356,8 @@ export const fetchAllUsers = userId => ({
         params: {
             id: userId
         },
-        success,
-        failure
+        success: success,
+        failure: failure
     })
 })
 ```
