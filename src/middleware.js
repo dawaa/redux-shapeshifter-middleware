@@ -185,7 +185,8 @@ const middleware = (options) => {
         if (
           errors !== undefined
           && errors !== null
-          && errors.constructor === Array ) {
+          && errors.constructor === Array
+          && errors.length > 0 ) {
           return Promise.reject( JSON.stringify( errors ) )
         }
 
