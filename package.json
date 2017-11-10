@@ -1,6 +1,6 @@
 {
   "name": "redux-shapeshifter-middleware",
-  "version": "0.3.1",
+  "version": "0.4.1-rc1",
   "description": "Redux middleware for empowering your actions using `axios` and `qs` libraries combined.",
   "main": "./build/redux-shapeshifter-middleware.min.js",
   "author": "Alejandro Andersson <alejandro.andersson@hyperisland.se>",
@@ -15,7 +15,7 @@
   "license": "MIT",
   "scripts": {
     "prepublish": "yarn run test && yarn run build:prod:umd",
-    "test": "cross-env BABEL_ENV=commonjs mocha --require babel-polyfill --require babel-core/register --reporter spec test/*.js",
+    "test": "cross-env BABEL_ENV=commonjs nyc mocha --require babel-polyfill --require babel-core/register --reporter spec test/*.js",
     "test:watch": "yarn run test --watch",
     "build:umd": "cross-env BABEL_ENV=commonjs NODE_ENV=development webpack",
     "build:prod:umd": "cross-env BABEL_ENV=commonjs NODE_ENV=production webpack"
@@ -62,6 +62,7 @@
     "i": "^0.3.6",
     "mocha": "^4.0.1",
     "npm": "^5.5.1",
+    "nyc": "^11.3.0",
     "sinon": "^4.0.2",
     "webpack": "^3.8.1"
   }
