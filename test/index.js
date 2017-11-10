@@ -5,7 +5,16 @@ import axios          from 'axios'
 
 // internal
 import { isGeneratorFn } from '../src/generator'
-import shapeshifter      from '../src/middleware'
+import shapeshifter, { middlewareOpts } from '../src/middleware'
+
+const createApiAction = name => ({
+  type: 'API',
+  types: [
+    `${name}`,
+    `${name}_SUCCESS`,
+    `${name}_FAILED`,
+  ]
+})
 
 describe( 'shapeshifter middleware', () => {
   let store, next, dispatch, middleware, sandbox;
@@ -20,7 +29,10 @@ describe( 'shapeshifter middleware', () => {
       })
     }
 
-    middleware = shapeshifter({ base: 'http://cp.api/v1' })
+    middleware = shapeshifter({
+      base: 'http://cp.api/v1',
+      auth: { user: 'sessionid' }
+    })
     next       = store.dispatch
     dispatch   = action => middleware( store )( next )( action )
 
@@ -28,6 +40,17 @@ describe( 'shapeshifter middleware', () => {
   })
   afterEach(() => sandbox.restore())
 
+  it ( 'Should set correct options', () => {
+    chai.assert.deepEqual( middlewareOpts, {
+      base: 'http://cp.api/v1',
+      constants: {
+        API       : 'API',
+        API_ERROR : 'API_ERROR',
+        API_VOID  : 'API_VOID'
+      },
+      auth: { user: 'sessionid' }
+    } )
+  } )
 
   it ( 'should ignore action if not of type API', () => {
     const action = { type: 'MISS_ME', payload: {} }
@@ -114,21 +137,14 @@ describe( 'shapeshifter middleware', () => {
 
     describe( 'Failed API calls', () => {
       it ( 'Let fallback failure() method capture it', done => {
-        const payload  = {
-          data: 'Failed to do stuff.'
-        }
+        const payload  = { data: 'Failed to do stuff.' }
         const resolved = new Promise(r => r( payload ))
         sandbox.stub( axios, 'get' ).returns( resolved )
 
         const action = {
-          type: 'API',
-          types: [
-            'FETCH_USER',
-            'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
-          ],
+          ...createApiAction('FETCH_USER'),
           payload: () => ({
-            url: '/users/fetch',
+            url: '/users/fetch'
           })
         }
 
@@ -187,49 +203,119 @@ describe( 'shapeshifter middleware', () => {
       } )
     } )
 
-    it ( 'Successful API call but wrong status code', done => {
-      const payload  = {
-        data: {
-          errors: [ 'Error authorizing or something' ],
-          status: 401
-        }
-      }
-      const resolved = new Promise(r => r( payload ))
-      sandbox.stub( axios, 'get' ).returns( resolved )
+    describe( 'Successful API calls, returning errors', () => {
+      it ( 'Should reject with prop `error ', done => {
+        sandbox.stub( axios, 'get' )
+          .returns(
+            new Promise(r => r({
+              data: {
+                error: 'An error occurred in the back-end, oh danglers!',
+                status: 200
+              }
+            }))
+          )
 
-      const action = {
-        type: 'API',
-        types: [
-          'FETCH_USER',
-          'FETCH_USER_SUCCESS',
-          'FETCH_USER_FAILED'
-        ],
-        payload: () => ({
-          url: '/users/fetch',
-          success: (type, { user: { name } }) => ({
-            type,
-            firstName: name
+        const failureSpy = sinon.spy()
+        const action = {
+          ...createApiAction( 'FETCH_USER' ),
+          payload: () => ({
+            url: '/users/fetch',
+            failure: failureSpy
           })
+        }
+
+        dispatch( action )
+
+        setTimeout(() => {
+          chai.assert.isTrue( failureSpy.called, 'Call failure() when receiving prop `error` from back-end' )
+          chai.assert.deepEqual(
+            failureSpy.args[ 0 ],
+            [
+              'FETCH_USER_FAILED',
+              'An error occurred in the back-end, oh danglers!'
+            ]
+          )
+          done()
         })
-      }
+      } )
 
-      const expectedAction = {
-        type: 'API_ERROR',
-        message: 'FETCH_USER_FAILED failed.. lol',
-        error: JSON.stringify( payload.data.errors )
-      }
+      it ( 'Should reject with prop `errors` (array)', done => {
+        const payload = {
+          data: {
+            errors: [ 'Reject this one baby', 'Another error' ],
+            status: 200
+          }
+        }
+        const resolved = new Promise(r => r( payload ))
+        sandbox.stub( axios, 'get' ).returns( resolved )
 
-      dispatch( action )
+        const failureSpy = sinon.spy()
 
-      setTimeout(() => {
-        chai.assert.isTrue( store.dispatch.called )
-        chai.assert.isTrue( store.dispatch.calledWith( expectedAction ) )
-        done()
-      })
+        const action = {
+          ...createApiAction( 'FETCH_USER' ),
+          payload: () => ({
+            url: '/users/fetch',
+            failure: failureSpy
+          })
+        }
+
+        dispatch( action )
+
+        setTimeout(() => {
+          chai.assert.isTrue( failureSpy.called, 'Should call failure()' )
+          chai.assert.deepEqual(
+            failureSpy.args[ 0 ],
+            [
+              'FETCH_USER_FAILED',
+              '[\"Reject this one baby\",\"Another error\"]'
+            ]
+          )
+          done()
+        })
+      } )
     } )
 
-
     describe( 'Successful API calls', () => {
+      it ( 'Successful API call but wrong status code', done => {
+        const payload  = {
+          data: {
+            errors: [ 'Error authorizing or something' ],
+            status: 401
+          }
+        }
+        const resolved = new Promise(r => r( payload ))
+        sandbox.stub( axios, 'get' ).returns( resolved )
+
+        const action = {
+          type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
+          payload: () => ({
+            url: '/users/fetch',
+            success: (type, { user: { name } }) => ({
+              type,
+              firstName: name
+            })
+          })
+        }
+
+        const expectedAction = {
+          type: 'API_ERROR',
+          message: 'FETCH_USER_FAILED failed.. lol',
+          error: JSON.stringify( payload.data.errors )
+        }
+
+        dispatch( action )
+
+        setTimeout(() => {
+          chai.assert.isTrue( store.dispatch.called )
+          chai.assert.isTrue( store.dispatch.calledWith( expectedAction ) )
+          done()
+        })
+      } )
 
       it ( 'Params should match without auth proprerty', done => {
         const payload  = {
@@ -369,7 +455,7 @@ describe( 'shapeshifter middleware', () => {
 
 
         setTimeout(() => {
-          chai.assert.isTrue( spy.called )
+          chai.assert.isTrue( spy.called, 'payload.success() was called' )
           chai.assert.deepEqual( spy.args[ 0 ], expected )
           done()
         })
@@ -706,11 +792,11 @@ describe( 'shapeshifter middleware', () => {
         })
       } )
 
-      it ( 'Success generator function should yield SUCCESS with payload', done => {
+      it ( 'should yield SUCCESS with payload', done => {
         const payload  = {
           data: {
             user: { name: 'Alejandro' },
-            status: 200
+            status: 200,
           }
         }
         const resolved = new Promise(r => r( payload ))
@@ -746,8 +832,12 @@ describe( 'shapeshifter middleware', () => {
         dispatch( action )
 
         setTimeout(() => {
-          chai.assert.isTrue( store.dispatch.called )
-          chai.assert.deepEqual( store.dispatch.args[ 0 ][ 0 ], expected )
+          chai.assert.isTrue( store.dispatch.called, 'store.dispatch() was called' )
+          chai.assert.deepEqual(
+            store.dispatch.args[ 0 ][ 0 ],
+            expected,
+            'Dispatch params match expected literal object'
+          )
           done()
         })
       } )

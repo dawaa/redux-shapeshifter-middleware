@@ -3,6 +3,7 @@ import axios from 'axios'
 import qs    from 'qs'
 
 // internal
+import recursiveObjFind             from './recursiveObjFind'
 import { isGeneratorFn }            from './generator'
 import { API, API_ERROR, API_VOID } from './consts'
 
@@ -15,8 +16,10 @@ const defaultMiddlewareOpts = {
   }
 }
 
+export let middlewareOpts = {}
+
 const middleware = (options) => {
-  const middlewareOpts = {
+  middlewareOpts = {
     ...defaultMiddlewareOpts,
     ...options
   }
@@ -33,7 +36,7 @@ const middleware = (options) => {
     // Bail if action is missing `payload` property
     // Bail if `payload` property is not a function
     if ( ! action.payload || typeof action.payload !== 'function' ) {
-      
+
       if ( action.types && action.types.constructor === Array ) {
         const [ REQUEST, SUCCESS, FAILURE ] = action.types
 
@@ -121,8 +124,14 @@ const middleware = (options) => {
     }
 
     // Append current logged in user's session id to the call
-    if ( auth ) {
-      parameters.sessionid = getState().user.sessionid;
+    if ( middlewareOpts.hasOwnProperty( 'auth' ) && auth ) {
+      const findings = recursiveObjFind( getState(), middlewareOpts.auth )
+
+      if ( findings !== false ) {
+        for ( let prop in findings ) {
+          parameters[ prop ] = findings[ prop ]
+        }
+      }
     }
 
     let store = { dispatch, state: getState(), getState };
@@ -159,11 +168,24 @@ const middleware = (options) => {
           return Promise.reject( 'Something went wrong with the API call.' )
         }
 
-
-        const { data }           = response
-        const { status, errors } = data
+        const { data }                  = response
+        const { status, errors, error } = data
 
         if ( status !== 200 && status !== 201 && status !== 204 ) {
+          return Promise.reject( JSON.stringify( errors ) )
+        }
+
+        if ( error !== undefined
+          && error !== null
+          && error.constructor === String
+          && errors instanceof Array === false ) {
+          return Promise.reject( error )
+        }
+
+        if (
+          errors !== undefined
+          && errors !== null
+          && errors.constructor === Array ) {
           return Promise.reject( JSON.stringify( errors ) )
         }
 
