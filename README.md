@@ -2,10 +2,30 @@
 
 Redux middleware that will empower your _actions_ to become your go-to guy whenever there is a need for ajax calls ... and have you say, [**...!**](https://youtu.be/nm6DO_7px1I?t=9)
 
-__________________
-#### Documentation is still a work in progress...
-__________________
 
+## Table of Contents
+* [Installation](https://github.com/dawaa/redux-shapeshifter-middleware#installation)
+    * [Implementation](https://github.com/dawaa/redux-shapeshifter-middleware#implementation)
+        * [Basic set up](https://github.com/dawaa/redux-shapeshifter-middleware#a-very-basic-implementation)
+        * [Detailed set up](https://github.com/dawaa/redux-shapeshifter-middleware#a-more-detailed-set-up-of-shapeshifter)
+* [Action properties](https://github.com/dawaa/redux-shapeshifter-middleware#action-properties)
+    * [type](https://github.com/dawaa/redux-shapeshifter-middleware#type-string)
+    * [types](https://github.com/dawaa/redux-shapeshifter-middleware#types-array)
+    * [payload](https://github.com/dawaa/redux-shapeshifter-middleware#payload-function)
+        * [payload properties](https://github.com/dawaa/redux-shapeshifter-middleware#inside-payload-properties)
+            * [url](https://github.com/dawaa/redux-shapeshifter-middleware#url-string)
+            * [tapBeforeCall](https://github.com/dawaa/redux-shapeshifter-middleware#tapbeforecall-function)
+            * [success](https://github.com/dawaa/redux-shapeshifter-middleware#success-function)
+            * [failure](https://github.com/dawaa/redux-shapeshifter-middleware#failure-function)
+            * [tapAfterCall](https://github.com/dawaa/redux-shapeshifter-middleware#tapaftercall-function)
+            * [auth](https://github.com/dawaa/redux-shapeshifter-middleware#auth-boolean)
+    * [meta](https://github.com/dawaa/redux-shapeshifter-middleware#meta-object)
+        * [mergeParams](https://github.com/dawaa/redux-shapeshifter-middleware#metamergeparams-boolean)
+* [How to use?](https://github.com/dawaa/redux-shapeshifter-middleware#how-to-use)
+    * [Normal example](https://github.com/dawaa/redux-shapeshifter-middleware#normal-example)
+    * [Generator example](https://github.com/dawaa/redux-shapeshifter-middleware#generator-example)
+
+______________________________________________________
 
 ## Installation
 ```
@@ -177,7 +197,15 @@ const anActionFn = () => ({
 #### `url <string>`
 
 #### `tapBeforeCall <function>`
-Is called before the API request is made, also the function receives an object argument.. Containing `params <object>`, `dispatch <function>`, `state <object>` and `getState <function>`
+* Arguments
+    * `obj <object>`
+        * `params <object>`
+        * `dispatch <function>`
+        * `state <object>`
+        * `getState <function>` 
+
+
+Is called before the API request is made, also the function receives an object argument.
 
 #### `success <function>`
 * Arguments
@@ -197,6 +225,13 @@ This method is run if the API call went through successfully with no errors.
 This method is run if the API call responds with an error from the back-end.
 
 #### `tapAfterCall <function>`
+* Arguments
+    * `obj <object>`
+        * `params <object>`
+        * `dispatch <function>`
+        * `state <object>`
+        * `getState <function>` 
+
 Same as `tapBeforeCall <function>` but is called **after** the API request was made.
 
 #### `auth <boolean>`
@@ -212,7 +247,7 @@ This is our jack-in-the-box prop, you can probably think of lots of cool stuff t
 Basically this allows to bridge stuff between the action and the `success()` method.
 
 **Note**
-Check `Payload > "Inside payload properties" > success()` above to understand where these meta tags will be available.
+Check [`Payload > "Inside payload properties" > success()`](https://github.com/dawaa/redux-shapeshifter-middleware#success-function) above to understand where these meta tags will be available.
 
 ```javascript
 const success = (type, payload, meta, store) => ({
@@ -252,7 +287,7 @@ ______________________________________________________
 
 ## How to use?
 
-### Normal function
+### Normal example
 A normal case where we have both dispatch and our current state for our usage.
 
 ```js
@@ -295,7 +330,7 @@ export const fetchAllUsers = () => ({
 
 ______________________________________________________
 
-### Generator function
+### Generator example
 A case where we make us of a generator function.
 
 ```js
