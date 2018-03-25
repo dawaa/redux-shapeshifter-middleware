@@ -16,6 +16,7 @@
   "scripts": {
     "prepublish": "yarn run test && yarn run build:prod:umd",
     "test": "cross-env BABEL_ENV=commonjs nyc mocha --require babel-polyfill --require babel-core/register --reporter spec test/*.js",
+    "test:debug": "./node_modules/.bin/mocha --inspect --require babel-polyfill --require babel-core/register test/*.js",
     "test:watch": "yarn run test --watch",
     "build:umd": "cross-env BABEL_ENV=commonjs NODE_ENV=development webpack",
     "build:prod:umd": "cross-env BABEL_ENV=commonjs NODE_ENV=production webpack"
@@ -59,11 +60,13 @@
     "babel-preset-env": "^1.6.1",
     "chai": "^4.1.2",
     "cross-env": "^5.1.0",
+    "decache": "^4.4.0",
     "i": "^0.3.6",
     "mocha": "^4.0.1",
     "npm": "^5.5.1",
     "nyc": "^11.3.0",
     "sinon": "^4.0.2",
+    "sinon-chai": "^3.0.0",
     "webpack": "^3.8.1"
   }
 }

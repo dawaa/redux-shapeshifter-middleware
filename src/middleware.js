@@ -1,11 +1,16 @@
 // external
-import axios from 'axios'
-import qs    from 'qs'
+import axios, { CancelToken } from 'axios'
+import qs                     from 'qs'
 
 // internal
-import recursiveObjFind             from './recursiveObjFind'
-import { isGeneratorFn }            from './generator'
-import { API, API_ERROR, API_VOID } from './consts'
+import recursiveObjFind                from './recursiveObjFind'
+import { isGeneratorFn }               from './generator'
+import { API, API_ERROR, API_VOID }    from './consts'
+import {
+  removeFromStack,
+  existsInStack
+} from './callStack'
+import * as callStack from './callStack'
 
 const defaultMiddlewareOpts = {
   base: '',
@@ -27,6 +32,11 @@ const middleware = (options) => {
   // Clear trailing slash
   middlewareOpts.base = middlewareOpts.base.replace( /\/$/, '' )
 
+  /**
+   * Our middleware starts here
+   *
+   * @return Promise
+   */
   return ({ dispatch, getState }) => next => action => {
     const { base, constants } = middlewareOpts;
 
@@ -111,7 +121,8 @@ const middleware = (options) => {
         dispatch,
         getState,
         state: getState()
-      }
+      },
+      axios: axiosConfig = {}
     } = action;
 
     let REQUEST, SUCCESS, FAILURE;
@@ -123,13 +134,47 @@ const middleware = (options) => {
       [ REQUEST, SUCCESS, FAILURE ] = action.types
     }
 
-    // Append current logged in user's session id to the call
-    if ( middlewareOpts.hasOwnProperty( 'auth' ) && auth ) {
-      const findings = recursiveObjFind( getState(), middlewareOpts.auth )
 
-      if ( findings !== false ) {
-        for ( let prop in findings ) {
-          parameters[ prop ] = findings[ prop ]
+    const pendingCall = existsInStack( REQUEST )
+    if ( pendingCall !== false ) {
+      pendingCall.cancel( `${REQUEST} call was cancelled.` )
+    }
+
+    // Add call to callStack
+    const source = CancelToken.source()
+    callStack.addToStack({ call: REQUEST, token: source.token, cancel: source.cancel })
+
+    parameters.cancelToken = source.token
+
+    // Append current logged in user's session id to the call
+    let authHeaders = false
+    if ( middlewareOpts.hasOwnProperty( 'auth' ) && auth ) {
+      if ( middlewareOpts.auth.hasOwnProperty( 'headers' ) ) {
+        authHeaders    = true
+
+        const tokenRgx = /#(\w+\.?)+/g
+        const store    = getState()
+        Object.keys( middlewareOpts.auth.headers ).map((header) => {
+          middlewareOpts.auth.headers[ header ] = middlewareOpts.auth.headers[ header ]
+            .replace( tokenRgx, (match) => {
+              const m    = match.substr( 1 ).split( '.' )
+              const prop = m.shift()
+
+              let _storeVal = store[ prop ]
+              while ( _storeVal != null && m.length ) {
+                _storeVal = _storeVal[ m.shift() ]
+              }
+
+              return _storeVal
+            } )
+        })
+      } else {
+        const findings = recursiveObjFind( getState(), middlewareOpts.auth )
+
+        if ( findings !== false ) {
+          for ( let prop in findings ) {
+            parameters[ prop ] = findings[ prop ]
+          }
         }
       }
     }
@@ -157,109 +202,152 @@ const middleware = (options) => {
     const params = method === 'post' ? qs.stringify( parameters ) : { params: parameters }
 
 
-    const url = base + uris
+    const config = Object.assign(
+      {},
+      axiosConfig,
+      (
+        authHeaders ? { headers: middlewareOpts.auth.headers } : {}
+      )
+    )
 
-    axios[ method ]( url, params )
-      .then( response => {
-        if ( typeof response.data !== 'object' ) {
-          if ( typeof response.data === 'string' ) {
-            return Promise.reject( response.data )
+    const baseURL = (
+      base.length > 0
+        ? base
+        : config.baseURL != null && config.baseURL.length > 0
+          ? config.baseURL
+          : ''
+    )
+    const url = baseURL + uris
+
+    let _call
+
+    // Check if method can contain data and a config
+    if ( [ 'post', 'put', 'patch' ].indexOf( method.toLowerCase() ) !== -1 ) {
+      _call = axios[ method ]( url, params, config )
+
+    } else if ( 'request' === method.toLowerCase() ) {
+      _call = axios[ method ]( config )
+
+    } else {
+      _call = axios[ method ]( url, Object.assign( params, config ) )
+    }
+
+    _call.then( response => {
+      if ( typeof response.data !== 'object' ) {
+        if ( typeof response.data === 'string' ) {
+          return Promise.reject( response.data )
+        }
+        return Promise.reject( 'Something went wrong with the API call.' )
+      }
+
+      const { data }                  = response
+      const { status, errors, error } = data
+
+      if ( status !== 200 && status !== 201 && status !== 204 ) {
+        return Promise.reject( JSON.stringify( errors ) )
+      }
+
+      if ( error !== undefined
+        && error !== null
+        && error.constructor === String
+        && errors instanceof Array === false ) {
+        return Promise.reject( error )
+      }
+
+      if (
+        errors !== undefined
+        && errors !== null
+        && errors.constructor === Array
+        && errors.length > 0 ) {
+        return Promise.reject( JSON.stringify( errors ) )
+      }
+
+      /**
+       * Handle generator functions
+       */
+      if ( isGeneratorFn( success ) ) {
+        return new Promise(( resolve, reject ) => {
+          let gen = success( SUCCESS, response.data, meta, store )
+
+          const _resolve = data => {
+            try {
+              let it = gen.next( data )
+              _iterate( it )
+            } catch (e) {
+              reject( e )
+            }
           }
-          return Promise.reject( 'Something went wrong with the API call.' )
-        }
 
-        const { data }                  = response
-        const { status, errors, error } = data
+          const _reject = error => {
+            try {
+              _iterate( gen.throw( error ) )
+            } catch (e) {
+              reject( e )
+            }
+          }
 
-        if ( status !== 200 && status !== 201 && status !== 204 ) {
-          return Promise.reject( JSON.stringify( errors ) )
-        }
+          const _iterate = it => {
+            let { done, value } = it || {}
 
-        if ( error !== undefined
-          && error !== null
-          && error.constructor === String
-          && errors instanceof Array === false ) {
-          return Promise.reject( error )
-        }
+            if ( done === true ) {
+              // Remove call from callStack when finished
+              removeFromStack( REQUEST )
 
-        if (
-          errors !== undefined
-          && errors !== null
-          && errors.constructor === Array
-          && errors.length > 0 ) {
-          return Promise.reject( JSON.stringify( errors ) )
-        }
+              if ( value === undefined ) {
+                return resolve({ type: API_VOID, LAST_ACTION: REQUEST })
+              }
 
-        /**
-         * Handle generator functions
-         */
-        if ( isGeneratorFn( success ) ) {
-          return new Promise(( resolve, reject ) => {
-            let gen = success( SUCCESS, response.data, meta, store )
+              return resolve( value )
+            }
 
-            const _resolve = data => {
+            // If we are dealing with a generator function
+            if ( value.then && typeof value.then === 'function' ) {
+              Promise.resolve( value ).then( _resolve, _reject )
+
+              // If value is function
+            } else if ( typeof value === 'function' ) {
               try {
-                let it = gen.next( data )
-                _iterate( it )
+                _resolve( value() )
               } catch (e) {
-                reject( e )
+                _reject( e )
               }
+
+              // If all else fails
+            } else {
+              _resolve( value )
             }
+          }
 
-            const _reject = error => {
-              try {
-                _iterate( gen.throw( error ) )
-              } catch (e) {
-                reject( e )
-              }
-            }
+          // Kick it Stevie Wonder!
+          _resolve()
+        })
+        .then( next, error => {
+          // Remove call from callStack when finished
+          removeFromStack( REQUEST )
 
-            const _iterate = it => {
-              let { done, value } = it || {}
+          console.error( `Generator ACTION had an error ==> ${ error }` )
+        } )
+      }
 
-              if ( done === true ) {
-                if ( value === undefined ) {
-                  return resolve({ type: API_VOID, LAST_ACTION: REQUEST })
-                }
+      // Remove call from callStack when finished
+      removeFromStack( REQUEST )
 
-                return resolve( value )
-              }
-
-              // If we are dealing with a generator function
-              if ( value.then && typeof value.then === 'function' ) {
-                Promise.resolve( value ).then( _resolve, _reject )
-
-                // If value is function
-              } else if ( typeof value === 'function' ) {
-                try {
-                  _resolve( value() )
-                } catch (e) {
-                  _reject( e )
-                }
-
-                // If all else fails
-              } else {
-                _resolve( value )
-              }
-            }
-
-            // Kick it Stevie Wonder!
-            _resolve()
-          })
-          .then( next, error => {
-            console.error( `Generator ACTION had an error ==> ${ error }` )
-          } )
-        }
-
-        dispatch( success( SUCCESS, response.data, meta, store ) )
+      dispatch( success( SUCCESS, response.data, meta, store ) )
       })
-      .catch( error => dispatch( failure( FAILURE, error ) ) )
+      .catch( error => {
+        // Remove call from callStack when finished
+        removeFromStack( REQUEST )
+
+        dispatch( failure( FAILURE, error ) )
+      })
 
 
     // Not sure of its usage atm, but it might be nice to have some where
     if ( typeof tapAfterCall === 'function' ) {
       tapAfterCall( { params: parameters, ...store } )
     }
+
+    return _call
   }
 }
 
