@@ -240,8 +240,8 @@ const middleware = (options) => {
         return Promise.reject( 'Something went wrong with the API call.' )
       }
 
-      const { data }                  = response
-      const { status, errors, error } = data
+      const { data, status }  = response
+      const { errors, error } = data
 
       if ( status !== 200 && status !== 201 && status !== 204 ) {
         return Promise.reject( JSON.stringify( errors ) )

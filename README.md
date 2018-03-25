@@ -7,7 +7,8 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
 * [Installation](https://github.com/dawaa/redux-shapeshifter-middleware#installation)
     * [Implementation](https://github.com/dawaa/redux-shapeshifter-middleware#implementation)
         * [Basic set up](https://github.com/dawaa/redux-shapeshifter-middleware#a-very-basic-implementation)
-        * [Detailed set up](https://github.com/dawaa/redux-shapeshifter-middleware#a-more-detailed-set-up-of-shapeshifter)
+        * [Detailed set up](https://github.com/dawaa/redux-shapeshifter-middleware#a-more-detailed-set-up-of-shapeshifter-and-authentication)
+        * [Header authentication](https://github.com/dawaa/redux-shapeshifter-middleware#header-authentication)
 * [Action properties](https://github.com/dawaa/redux-shapeshifter-middleware#action-properties)
     * [type](https://github.com/dawaa/redux-shapeshifter-middleware#type-string)
     * [types](https://github.com/dawaa/redux-shapeshifter-middleware#types-array)
@@ -36,11 +37,23 @@ $ npm|yarn install|add redux-shapeshifter-middleware
 
 ##### A very basic implementation.
 ```js
-import { createStore, applyMiddleware } from 'redux'
-import shapeshifter                     from 'redux-shapeshifter-middleware'
+import { createStore, applyMiddleware } from 'redux';
+import shapeshifter                     from 'redux-shapeshifter-middleware';
 
 const apiMiddleware = shapeshifter({
     base: 'http://api.url/v1/',
+    /**
+     * If payload.auth is set to `true` this will kick in and add the
+     * properties added here to the API request.
+     *
+     * Note: These values will be taken from Redux store
+     * e.g. below would result in:
+     *  Store {
+     *    user: {
+     *      sessionid: '1234abcd'
+     *    }
+     *  }
+     */
     auth: {
         user: 'sessionid'
     }
@@ -57,32 +70,28 @@ const store = createStore(
 ```
 ______________________________________________________
 
-##### A more detailed set up of shapeshifter.
+##### A more detailed set up of shapeshifter and authentication.
 ```js
-import { createStore, applyMiddleware } from 'redux'
-import shapeshifter                     from 'redux-shapeshifter-middleware'
+import { createStore, applyMiddleware } from 'redux';
+import shapeshifter                     from 'redux-shapeshifter-middleware';
 
 const shapeshifterOpts = {
     base: 'http://api.url/v1/',
 
-    /**
-     * If payload.auth is set to `true` this will kick in and add the
-     * properties added here to the API request.
-     *
-     * Note: These values will be taken from Redux store
-     */
+
     auth: {
         user: {
             sessionid: true
             // If you wish to make sure a property is NOT present
-            // you may pass `false` instead.
+            // you may pass `false` instead.. note that this means
+            // the back-end would have to deal with the incoming data.
         }
     },
-    
+
     /**
      * constants.API
      *  Tells the middleware what action type it should act on
-     * 
+     *
      * constants.API_ERROR
      *  If back-end responds with an error or call didn't go through,
      *  middleware will emit 'API_ERROR'.. Unless you specified your own
@@ -107,9 +116,9 @@ const shapeshifterOpts = {
      *  ```
      */
     constants: {
-        API       : 'API_CONSTANT', // default: 'API'
+        API       : 'API_CONSTANT',       // default: 'API'
         API_ERROR : 'API_ERROR_RESPONSE', // default: 'API_ERROR'
-        API_VOID  : 'API_NO_RESPONSE' // default: 'API_VOID'
+        API_VOID  : 'API_NO_RESPONSE',    // default: 'API_VOID'
     }
 }
 const apiMiddleware = shapeshifter( shapeshifterOpts )
@@ -123,6 +132,35 @@ const store = createStore(
     )
 )
 ```
+______________________________________________________
+
+##### Header authentication
+```js
+import { createStore, applyMiddleware } from 'redux';
+import shapeshifter                     from 'redux-shapeshifter-middleware';
+
+const shapeshifterOpts = {
+    base: 'http://api.url/v1/',
+    auth: {
+        headers: {
+            'Authorization': 'Bearer #user.token'
+            // Above will append the key ("Authorization") to each http request being made
+            // that has the `payload.auth` set to true.
+            // The value of the key has something weird in it, "#user.token". What this means is
+            // that when the request is made this weird part will be replaced with the actual
+            // value from the Redux store.
+            //
+            // e.g. this could be used more than once, or it could also be just for deeper values
+            // 'Bearer #user.data.private.token'.
+        }
+    },
+    // .. retracted code, because it's the same as above.
+}
+// .. retracted code, because it's the same as above.
+```
+
+
+
 ## Action properties
 We will explore what properties there are to be used for our new actions..
 
@@ -160,7 +198,7 @@ ______________________________________________________
         * `#dispatch() <function>`
         * `#state <object>`
 
-This property and its value is what actually defines the API call we want to make. 
+This property and its value is what actually defines the API call we want to make.
 
 **Note**
 Payload **must** return an object. Easiest done using a fat-arrow function like below.
@@ -203,7 +241,7 @@ const anActionFn = () => ({
         * `params <object>`
         * `dispatch <function>`
         * `state <object>`
-        * `getState <function>` 
+        * `getState <function>`
 
 
 Is called before the API request is made, also the function receives an object argument.
@@ -231,7 +269,7 @@ This method is run if the API call responds with an error from the back-end.
         * `params <object>`
         * `dispatch <function>`
         * `state <object>`
-        * `getState <function>` 
+        * `getState <function>`
 
 Same as `tapBeforeCall <function>` but is called **after** the API request was made.
 
@@ -356,7 +394,7 @@ export const FETCH_USER_FAILED  = 'API/FETCH_USER_FAILED'
 const success = function* (type, payload, { dispatch, state }) {
     // Get the USER id
     const userId = payload.user.id
-    
+
     // Fetch name of user
     const myName = yield new Promise((resolve, reject) => {
         axios.get('some-weird-url', { id: userId })
@@ -365,9 +403,9 @@ const success = function* (type, payload, { dispatch, state }) {
                 resolve( response.name );
             })
     })
-    
+
     dispatch({ type: 'MY_NAME_IS_WHAT', name: myName })
-    
+
     // Conditionally if we want to emit to the
     // system that the call is done.
     return {
