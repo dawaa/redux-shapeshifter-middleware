@@ -71,7 +71,8 @@ describe( 'shapeshifter middleware', () => {
         API_ERROR : 'API_ERROR',
         API_VOID  : 'API_VOID'
       },
-      auth: { user: 'sessionid' }
+      auth: { user: 'sessionid' },
+      fallbackToAxiosStatusResponse: true,
     } )
   } )
 
@@ -110,7 +111,8 @@ describe( 'shapeshifter middleware', () => {
               headers : {
                 'Authorization' : 'Bearer verylongsupersecret123token456',
               }
-            }
+            },
+            fallbackToAxiosStatusResponse: true,
           }
         )
       })

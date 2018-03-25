@@ -18,7 +18,8 @@ const defaultMiddlewareOpts = {
     API,
     API_ERROR,
     API_VOID
-  }
+  },
+  fallbackToAxiosStatusResponse: true
 }
 
 export let middlewareOpts = {}
@@ -38,7 +39,7 @@ const middleware = (options) => {
    * @return Promise
    */
   return ({ dispatch, getState }) => next => action => {
-    const { base, constants } = middlewareOpts;
+    const { base, constants, fallbackToAxiosStatusResponse } = middlewareOpts;
 
     // Bail if not an API action
     if ( action.type !== constants.API ) return next( action )
@@ -240,8 +241,14 @@ const middleware = (options) => {
         return Promise.reject( 'Something went wrong with the API call.' )
       }
 
-      const { data, status }  = response
+      const { data }          = response
       const { errors, error } = data
+
+      // Try catching the response status from the API call, otherwise
+      // fallback to Axios own status response.
+      const status = fallbackToAxiosStatusResponse
+        ? ( data.status || response.status )
+        : data.status
 
       if ( status !== 200 && status !== 201 && status !== 204 ) {
         return Promise.reject( JSON.stringify( errors ) )

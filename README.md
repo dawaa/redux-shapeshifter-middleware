@@ -7,7 +7,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
 * [Installation](https://github.com/dawaa/redux-shapeshifter-middleware#installation)
     * [Implementation](https://github.com/dawaa/redux-shapeshifter-middleware#implementation)
         * [Basic set up](https://github.com/dawaa/redux-shapeshifter-middleware#a-very-basic-implementation)
-        * [Detailed set up](https://github.com/dawaa/redux-shapeshifter-middleware#a-more-detailed-set-up-of-shapeshifter-and-authentication)
+        * [Detailed set up](https://github.com/dawaa/redux-shapeshifter-middleware#a-more-detailed-set-up-of-shapeshifter)
         * [Header authentication](https://github.com/dawaa/redux-shapeshifter-middleware#header-authentication)
 * [Action properties](https://github.com/dawaa/redux-shapeshifter-middleware#action-properties)
     * [type](https://github.com/dawaa/redux-shapeshifter-middleware#type-string)
@@ -56,7 +56,14 @@ const apiMiddleware = shapeshifter({
      */
     auth: {
         user: 'sessionid'
-    }
+    },
+    fallbackToAxiosStatusResponse: true, // default is: true
+    // Above tells the middleware to fallback to Axios status response if
+    // the data response from the API call is missing the property `status`.
+    // 
+    // If you however would like to deal with the status responses yourself you might
+    // want to set this to false and then in the response object from your back-end
+    // always provide a `status` property.
 })
 
 const store = createStore(
@@ -87,11 +94,11 @@ const shapeshifterOpts = {
             // the back-end would have to deal with the incoming data.
         }
     },
-
+    
     /**
      * constants.API
      *  Tells the middleware what action type it should act on
-     *
+     * 
      * constants.API_ERROR
      *  If back-end responds with an error or call didn't go through,
      *  middleware will emit 'API_ERROR'.. Unless you specified your own
@@ -155,7 +162,7 @@ const shapeshifterOpts = {
         }
     },
     // .. retracted code, because it's the same as above.
-}
+}    
 // .. retracted code, because it's the same as above.
 ```
 
@@ -198,7 +205,7 @@ ______________________________________________________
         * `#dispatch() <function>`
         * `#state <object>`
 
-This property and its value is what actually defines the API call we want to make.
+This property and its value is what actually defines the API call we want to make. 
 
 **Note**
 Payload **must** return an object. Easiest done using a fat-arrow function like below.
@@ -241,7 +248,7 @@ const anActionFn = () => ({
         * `params <object>`
         * `dispatch <function>`
         * `state <object>`
-        * `getState <function>`
+        * `getState <function>` 
 
 
 Is called before the API request is made, also the function receives an object argument.
@@ -269,7 +276,7 @@ This method is run if the API call responds with an error from the back-end.
         * `params <object>`
         * `dispatch <function>`
         * `state <object>`
-        * `getState <function>`
+        * `getState <function>` 
 
 Same as `tapBeforeCall <function>` but is called **after** the API request was made.
 
@@ -394,7 +401,7 @@ export const FETCH_USER_FAILED  = 'API/FETCH_USER_FAILED'
 const success = function* (type, payload, { dispatch, state }) {
     // Get the USER id
     const userId = payload.user.id
-
+    
     // Fetch name of user
     const myName = yield new Promise((resolve, reject) => {
         axios.get('some-weird-url', { id: userId })
@@ -403,9 +410,9 @@ const success = function* (type, payload, { dispatch, state }) {
                 resolve( response.name );
             })
     })
-
+    
     dispatch({ type: 'MY_NAME_IS_WHAT', name: myName })
-
+    
     // Conditionally if we want to emit to the
     // system that the call is done.
     return {
