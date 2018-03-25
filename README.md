@@ -21,6 +21,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
             * [auth](https://github.com/dawaa/redux-shapeshifter-middleware#auth-boolean)
     * [meta](https://github.com/dawaa/redux-shapeshifter-middleware#meta-object)
         * [mergeParams](https://github.com/dawaa/redux-shapeshifter-middleware#metamergeparams-boolean)
+    * [axios](https://github.com/dawaa/redux-shapeshifter-middleware#axios-object)
 * [How to use?](https://github.com/dawaa/redux-shapeshifter-middleware#how-to-use)
     * [Normal example](https://github.com/dawaa/redux-shapeshifter-middleware#normal-example)
     * [Generator example](https://github.com/dawaa/redux-shapeshifter-middleware#generator-example)
@@ -282,6 +283,14 @@ const fetchHeelies = () => ({
 Default is **false**.
 
 Just like this property states, it will pass anything you have under the property `payload.params` to the `meta` parameter passed to `success()` method.
+
+#### `axios <object>`
+This parameter allows us to use any Axios Request Config property that you can
+find under their docs.. [here](https://github.com/axios/axios#request-config).
+
+Anything added under the `ACTION.axios<object>` will have higher priority, meaning
+that it will override anything set before in the payload object that has the
+same property name.
 
 ______________________________________________________
 
