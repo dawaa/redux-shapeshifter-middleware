@@ -179,6 +179,7 @@ All options that the middleware can take.
 
 #### `base <string>`
 _`default: ''`_
+
 This sets the base url for all API calls being made through this middleware. Could be overwritten by using the `axios.baseURL` property on the Action.
 
 #### `constants <object>`
@@ -191,6 +192,7 @@ This sets the base url for all API calls being made through this middleware. Cou
 
 #### `auth <object>`
 _`default: undefined`_
+
 When making a request you can pass the `auth <boolean>` property to [`payload <object>`](https://github.com/dawaa/redux-shapeshifter-middleware#payload-function), doing this will activate this object which in return will pass the value as a parameter to the request being made.
 
 > Note that any properties or values passed within the auth {} object are connected to the Store.
@@ -245,6 +247,7 @@ __Example 3__ allows us to pass headers for authorization on requests having the
 
 #### `handleStatusResponses <function>`
 _`default: null`_
+
 * Arguments
     * [response](https://github.com/axios/axios#response-schema) `<object>` The Axios response object.
     * store `<object>`
@@ -275,10 +278,12 @@ const apiMiddleware = shapeshifter({
 
 #### `fallbackToAxiosStatusResponse <boolean>`
 _`default: true`_
+
 If you've built your own REST API and want to determine yourself what's right or wrong then setting this value to false would help you with that. Otherwise this would check the response object for a `status` key and if none exists it falls back to what Axios could tell from the request made.
 
 #### `customSuccessResponses <array>`
 _`default: null`_
+
 In case you are more "wordy" in your responses and your response object might look like:
 ```json
 {
