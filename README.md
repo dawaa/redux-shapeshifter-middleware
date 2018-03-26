@@ -4,35 +4,35 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
 
 
 ## Table of Contents
-* [Installation](https://github.com/dawaa/redux-shapeshifter-middleware#installation)
-    * [Implementation](https://github.com/dawaa/redux-shapeshifter-middleware#implementation)
-        * [Basic set up](https://github.com/dawaa/redux-shapeshifter-middleware#a-very-basic-implementation)
-        * [Detailed set up](https://github.com/dawaa/redux-shapeshifter-middleware#a-more-detailed-set-up-of-shapeshifter)
-        * [Header authentication](https://github.com/dawaa/redux-shapeshifter-middleware#header-authentication)
-* [Middleware configuration](https://github.com/dawaa/redux-shapeshifter-middleware#middleware-configuration)
-    * [base](https://github.com/dawaa/redux-shapeshifter-middleware#base-string)
-    * [constants](https://github.com/dawaa/redux-shapeshifter-middleware#constants-object)
-    * [auth](https://github.com/dawaa/redux-shapeshifter-middleware#auth-object)
-    * [handleStatusResponses](https://github.com/dawaa/redux-shapeshifter-middleware#handlestatusresponses-function)
-    * [fallbackToAxiosStatusResponse](https://github.com/dawaa/redux-shapeshifter-middleware#fallbacktoaxiosstatusresponse-boolean)
-    * [customSuccessResponses](https://github.com/dawaa/redux-shapeshifter-middleware#customsuccessresponses-array)
-* [Action properties](https://github.com/dawaa/redux-shapeshifter-middleware#action-properties)
-    * [type](https://github.com/dawaa/redux-shapeshifter-middleware#type-string)
-    * [types](https://github.com/dawaa/redux-shapeshifter-middleware#types-array)
-    * [payload](https://github.com/dawaa/redux-shapeshifter-middleware#payload-function)
-        * [payload properties](https://github.com/dawaa/redux-shapeshifter-middleware#inside-payload-properties)
-            * [url](https://github.com/dawaa/redux-shapeshifter-middleware#url-string)
-            * [tapBeforeCall](https://github.com/dawaa/redux-shapeshifter-middleware#tapbeforecall-function)
-            * [success](https://github.com/dawaa/redux-shapeshifter-middleware#success-function)
-            * [failure](https://github.com/dawaa/redux-shapeshifter-middleware#failure-function)
-            * [tapAfterCall](https://github.com/dawaa/redux-shapeshifter-middleware#tapaftercall-function)
-            * [auth](https://github.com/dawaa/redux-shapeshifter-middleware#auth-boolean)
-    * [meta](https://github.com/dawaa/redux-shapeshifter-middleware#meta-object)
-        * [mergeParams](https://github.com/dawaa/redux-shapeshifter-middleware#metamergeparams-boolean)
-    * [axios](https://github.com/dawaa/redux-shapeshifter-middleware#axios-object)
-* [How to use?](https://github.com/dawaa/redux-shapeshifter-middleware#how-to-use)
-    * [Normal example](https://github.com/dawaa/redux-shapeshifter-middleware#normal-example)
-    * [Generator example](https://github.com/dawaa/redux-shapeshifter-middleware#generator-example)
+* [Installation](#installation)
+    * [Implementation](#implementation)
+        * [Basic set up](#a-very-basic-implementation)
+        * [Detailed set up](#a-more-detailed-set-up-of-shapeshifter)
+        * [Header authentication](#header-authentication)
+* [Middleware configuration](#middleware-configuration)
+    * [base](#base-string)
+    * [constants](#constants-object)
+    * [auth](#auth-object)
+    * [handleStatusResponses](#handlestatusresponses-function)
+    * [fallbackToAxiosStatusResponse](#fallbacktoaxiosstatusresponse-boolean)
+    * [customSuccessResponses](#customsuccessresponses-array)
+* [Action properties](#action-properties)
+    * [type](#type-string)
+    * [types](#types-array)
+    * [payload](#payload-function)
+        * [payload properties](#inside-payload-properties)
+            * [url](#url-string)
+            * [tapBeforeCall](#tapbeforecall-function)
+            * [success](#success-function)
+            * [failure](#failure-function)
+            * [tapAfterCall](#tapaftercall-function)
+            * [auth](#auth-boolean)
+    * [meta](#meta-object)
+        * [mergeParams](#metamergeparams-boolean)
+    * [axios](#axios-object)
+* [How to use?](#how-to-use)
+    * [Normal example](#normal-example)
+    * [Generator example](#generator-example)
 
 ______________________________________________________
 
@@ -193,7 +193,7 @@ This sets the base url for all API calls being made through this middleware. Cou
 #### `auth <object>`
 _`default: undefined`_
 
-When making a request you can pass the `auth <boolean>` property to [`payload <object>`](https://github.com/dawaa/redux-shapeshifter-middleware#payload-function), doing this will activate this object which in return will pass the value as a parameter to the request being made.
+When making a request you can pass the `auth <boolean>` property to [`payload <object>`](#payload-function), doing this will activate this object which in return will pass the value as a parameter to the request being made.
 
 > Note that any properties or values passed within the auth {} object are connected to the Store.
 
@@ -421,7 +421,7 @@ This is our jack-in-the-box prop, you can probably think of lots of cool stuff t
 Basically this allows to bridge stuff between the action and the `success()` method.
 
 **Note**
-Check [`Payload > "Inside payload properties" > success()`](https://github.com/dawaa/redux-shapeshifter-middleware#success-function) above to understand where these meta tags will be available.
+Check [`Payload > "Inside payload properties" > success()`](#success-function) above to understand where these meta tags will be available.
 
 ```javascript
 const success = (type, payload, meta, store) => ({
