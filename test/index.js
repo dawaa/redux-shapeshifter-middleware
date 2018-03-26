@@ -16,6 +16,8 @@ import shapeshifter, {
 import * as callStack from '../src/callStack'
 // import * as mdw from '../src/middleware'
 
+const { assert } = chai
+
 const createApiAction = name => ({
   type: 'API',
   types: [
@@ -72,11 +74,13 @@ describe( 'shapeshifter middleware', () => {
         API_VOID  : 'API_VOID'
       },
       auth: { user: 'sessionid' },
+      handleStatusResponses: null,
       fallbackToAxiosStatusResponse: true,
+      customSuccessResponses: null,
     } )
   } )
 
-  it ( 'Should set headers within `auth` prop and successfully replace values with store values', () => {
+  it ( 'Should set headers within `auth` prop and successfully replace values with store values', (done) => {
     stubAxiosReturn({})
     setupMiddleware({
       base : 'http://cp.api/v1',
@@ -98,23 +102,28 @@ describe( 'shapeshifter middleware', () => {
 
     dispatch( action )
       .finally(() => {
-        chai.assert.deepEqual(
-          middlewareOpts,
-          {
-            base : 'http://cp.api/v1',
-            constants: {
-              API       : 'API',
-              API_ERROR : 'API_ERROR',
-              API_VOID  : 'API_VOID',
-            },
-            auth : {
-              headers : {
-                'Authorization' : 'Bearer verylongsupersecret123token456',
-              }
-            },
-            fallbackToAxiosStatusResponse: true,
-          }
-        )
+        setTimeout(() => {
+          assert.deepEqual(
+            middlewareOpts,
+            {
+              base : 'http://cp.api/v1',
+              constants: {
+                API       : 'API',
+                API_ERROR : 'API_ERROR',
+                API_VOID  : 'API_VOID',
+              },
+              auth : {
+                headers : {
+                  'Authorization' : 'Bearer verylongsupersecret123token456',
+                }
+              },
+              handleStatusResponses: null,
+              fallbackToAxiosStatusResponse: true,
+              customSuccessResponses: null,
+            }
+          )
+          done()
+        })
       })
   } )
 
@@ -385,12 +394,14 @@ describe( 'shapeshifter middleware', () => {
         dispatch( action )
           .finally(() => {})
           .then(() => {
-            chai.assert.isTrue( store.dispatch.called, 'Dispatch should\'ve been called' )
-            chai.assert.deepEqual(
-              store.dispatch.firstCall.args[ 0 ],
-              expectedAction,
-              'Dispatch should have been called with expectedAction'
-            )
+            setTimeout(() => {
+              assert.isTrue( store.dispatch.called, 'Dispatch should\'ve been called' )
+              assert.deepEqual(
+                store.dispatch.firstCall.args[ 0 ],
+                expectedAction,
+                'Dispatch should have been called with expectedAction'
+              )
+            })
           })
       } )
 
@@ -423,14 +434,17 @@ describe( 'shapeshifter middleware', () => {
         dispatch( action )
           .finally(() => {})
           .then(() => {
-            chai.assert.isTrue( store.dispatch.called )
-            chai.assert.isTrue( store.dispatch.calledWith( expectedAction ) )
+            setTimeout(() => {
+              assert.isTrue( store.dispatch.called )
+              assert.isTrue( store.dispatch.calledWith( expectedAction ) )
+            })
           })
       } )
+
     } )
 
     describe( 'Successful API calls, returning errors', () => {
-      it ( 'Should reject with prop `error ', () => {
+      it ( 'Should reject with prop `error`', (done) => {
         stubAxiosReturn({
           data: {
             error: 'An error occurred in the back-end, oh danglers!',
@@ -450,21 +464,24 @@ describe( 'shapeshifter middleware', () => {
         dispatch( action )
           .finally(() => {})
           .then(() => {
-            chai.assert.isTrue(
-              failureSpy.called,
-              'Call failure() when receiving prop `error` from back-end'
-            )
-            chai.assert.deepEqual(
-              failureSpy.args[ 0 ],
-              [
-                'FETCH_USER_FAILED',
-                'An error occurred in the back-end, oh danglers!'
-              ]
-            )
+            setTimeout(() => {
+              assert.isTrue(
+                failureSpy.called,
+                'Call failure() when receiving prop `error` from back-end'
+              )
+              assert.deepEqual(
+                failureSpy.args[ 0 ],
+                [
+                  'FETCH_USER_FAILED',
+                  'An error occurred in the back-end, oh danglers!'
+                ]
+              )
+              done()
+            })
           })
       } )
 
-      it ( 'Should reject with prop `errors` (array)', () => {
+      it ( 'Should reject with prop `errors` (array)', async() => {
         stubAxiosReturn({
           data: {
             errors: [ 'Reject this one baby', 'Another error' ],
@@ -482,23 +499,236 @@ describe( 'shapeshifter middleware', () => {
           })
         }
 
+        await dispatch( action )
+
+        setTimeout(() => {
+          assert.isTrue( failureSpy.called, 'Should call failure()' )
+          assert.deepEqual(
+            failureSpy.args[ 0 ],
+            [
+              'FETCH_USER_FAILED',
+              [ 'Reject this one baby', 'Another error' ],
+            ]
+          )
+        })
+      } )
+
+      it ( 'Should using custom status response handler reject', () => {
+        const rejectSpy  = sandbox.spy()
+        const resolveSpy = sandbox.spy()
+        setupMiddleware({
+          base: 'http://cp.api/v1',
+          handleStatusResponses(response, store) {
+            if ( response.data && response.data.errors ) {
+              rejectSpy()
+              return Promise.reject( response.data.errors )
+            }
+
+            resolveSpy()
+            return Promise.resolve()
+          }
+        })
+
+        const { stub } = stubAxiosReturn({
+          data: {
+            errors: [ 'Reject this one baby', 'Another error' ],
+            status: 200
+          },
+          status: 200
+        })
+
+        const failureSpy = sinon.spy()
+
+        const action = {
+          ...createApiAction( 'FETCH_USER' ),
+          payload: () => ({
+            url: '/users/fetch',
+            failure: failureSpy
+          })
+        }
+
         dispatch( action )
-          .finally(() => {})
-          .then(() => {
-            chai.assert.isTrue( failureSpy.called, 'Should call failure()' )
-            chai.assert.deepEqual(
-              failureSpy.args[ 0 ],
-              [
-                'FETCH_USER_FAILED',
-                '[\"Reject this one baby\",\"Another error\"]'
-              ]
-            )
+          .finally()
+          .then((res) => {
+            assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
+            assert.isTrue( rejectSpy.called, 'Should return Promise.reject.' )
+            assert.isFalse( resolveSpy.called, 'Should not return Promise.resolve.' )
+            // Because we have a nested Promise
+            setTimeout(() => {
+              assert.isTrue(
+                store.dispatch.called,
+                'Should have called dispatch()'
+              )
+              assert.isTrue(
+                failureSpy.calledOnce,
+                'failure() method of Action should have been called.'
+              )
+              assert.deepEqual(
+                failureSpy.firstCall.args,
+                [
+                  'FETCH_USER_FAILED',
+                  [ 'Reject this one baby', 'Another error' ]
+                ]
+              )
+            })
+          })
+      } )
+
+      it ( 'should using custom status response handler resolve', (done) => {
+        const rejectSpy  = sandbox.spy()
+        const resolveSpy = sandbox.spy()
+        setupMiddleware({
+          base: 'http://cp.api/v1',
+          handleStatusResponses(response, store) {
+            if ( response.data && response.data.errors ) {
+              rejectSpy()
+              return Promise.reject( response.data.errors )
+            }
+
+            resolveSpy()
+            return Promise.resolve()
+          }
+        })
+
+        const { stub } = stubAxiosReturn({
+          data: {
+            user: { name: 'Alejandro' },
+            status: 200
+          },
+          status: 200
+        })
+
+        const successSpy = sinon.spy()
+
+        const action = {
+          ...createApiAction( 'FETCH_USER' ),
+          payload: () => ({
+            url: '/users/fetch',
+            success: successSpy
+          })
+        }
+
+        dispatch( action )
+          .finally()
+          .then((res) => {
+            assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
+            assert.isTrue( resolveSpy.called, 'Should return Promise.resolve.' )
+            assert.isFalse( rejectSpy.called, 'Should not return Promise.reject.' )
+            // Because we have a nested Promise
+            setTimeout(() => {
+              assert.isTrue(
+                store.dispatch.called,
+                'Should have called dispatch()'
+              )
+              assert.isTrue(
+                successSpy.calledOnce,
+                'success() method of Action should have been called.'
+              )
+              assert.deepEqual(
+                successSpy.firstCall.args,
+                [
+                  'FETCH_USER_SUCCESS',
+                  {
+                    user: { name: 'Alejandro' },
+                    status: 200,
+                  },
+                  {
+                    ...store,
+                    state: {
+                      user: {
+                        sessionid: 'abc123',
+                        token: 'verylongsupersecret123token456'
+                      }
+                    }
+                  },
+                  null
+                ]
+              )
+              done()
+            })
           })
       } )
     } )
 
+    it ( 'should using custom status response handler resolve generator fn', (done) => {
+      const rejectSpy  = sandbox.spy()
+      const resolveSpy = sandbox.spy()
+      setupMiddleware({
+        base: 'http://cp.api/v1',
+        handleStatusResponses(response, store) {
+          if ( response.data && response.data.errors ) {
+            rejectSpy()
+            return Promise.reject( response.data.errors )
+          }
+
+          resolveSpy()
+          return Promise.resolve()
+        }
+      })
+
+      const { stub } = stubAxiosReturn({
+        data: {
+          user: { name: 'Alejandro' },
+          status: 200
+        },
+        status: 200
+      })
+
+      const successSpy = sinon.spy()
+
+      const action = {
+        ...createApiAction( 'FETCH_USER' ),
+        payload: () => ({
+          url: '/users/fetch',
+          success: function* (type, { user }) {
+            successSpy()
+            const fakePayload = { data: { user: { id: 1 }} }
+            const response    = yield new Promise(r => r( fakePayload ))
+
+            return {
+              type,
+              id: response.data.user.id,
+              name: user.name
+            }
+          },
+        })
+      }
+
+      const expected = {
+        type: 'FETCH_USER_SUCCESS',
+        id: 1,
+        name: 'Alejandro'
+      }
+
+      dispatch( action )
+        .finally()
+        .then((res) => {
+          assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
+          assert.isTrue( resolveSpy.called, 'Should return Promise.resolve.' )
+          assert.isFalse( rejectSpy.called, 'Should not return Promise.reject.' )
+          // Because we have a nested Promise
+          setTimeout(() => {
+            assert.isTrue(
+              store.dispatch.calledOnce,
+              'Should have called dispatch() twice'
+            )
+            assert.isTrue(
+              successSpy.calledOnce,
+              'success() generator method of Action should have been called.'
+            )
+            assert.deepEqual(
+              store.dispatch.firstCall.args[ 0 ],
+              expected,
+              'handleStatusResponse() should resolve success() generator fn'
+            )
+            done()
+          })
+        })
+
+    } )
+
     describe( 'Successful API calls', () => {
-      it ( 'Successful API call but wrong status code', () => {
+      it ( 'Successful API call but wrong status code', (done) => {
         stubAxiosReturn({
           data: {
             errors: [ 'Error authorizing or something' ],
@@ -525,18 +755,32 @@ describe( 'shapeshifter middleware', () => {
         const expectedAction = {
           type    : 'API_ERROR',
           message : 'FETCH_USER_FAILED failed.. lol',
-          error   : JSON.stringify( [ 'Error authorizing or something' ] ),
+          error   : {
+            data : {
+              errors : [ 'Error authorizing or something' ],
+              status : 401,
+            },
+          },
         }
 
         dispatch( action )
           .finally(() => {})
           .then(() => {
-            chai.assert.isTrue( store.dispatch.called )
-            chai.assert.isTrue( store.dispatch.calledWith( expectedAction ) )
+            setTimeout(() => {
+              chai.assert.isTrue(
+                store.dispatch.called,
+                'store.dispatch() should have been called.'
+              )
+              chai.assert.isTrue(
+                store.dispatch.calledWith( expectedAction ),
+                'store.dispatch() should have been called with expectedAction.'
+              )
+              done()
+            })
           })
       } )
 
-      it ( 'Params should match without auth proprerty', () => {
+      it ( 'Params should match without auth property', () => {
         stubAxiosReturn({
           data: {
             user: { name: 'Alejandro' },
@@ -581,7 +825,7 @@ describe( 'shapeshifter middleware', () => {
         dispatch( action )
           .finally(() => {})
           .then(() => {
-            chai.assert.deepEqual( axios.get.args[ 0 ][ 1 ], expected.args )
+            assert.deepEqual( axios.get.args[ 0 ][ 1 ], expected.args )
           })
       } )
 
@@ -958,6 +1202,43 @@ describe( 'shapeshifter middleware', () => {
             chai.assert.isTrue( spy.calledOnce )
             chai.assert.deepEqual( spy.args[ 0 ][ 0 ], expectedParams )
           })
+      } )
+
+      it ( 'Should succeed on a custom success response', (done) => {
+        setupMiddleware({
+          base: 'http://cp.api/v1',
+          customSuccessResponses: [ 'success' ],
+        })
+
+        stubAxiosReturn({
+          data: {
+            status: 'success'
+          },
+          status: 200
+        })
+
+        const successSpy = sinon.spy()
+        const action = {
+          ...createApiAction( 'FETCH_USER' ),
+          payload: () => ({
+            url: '/users/fetch',
+            success: successSpy
+          })
+        }
+
+        dispatch( action )
+
+        setTimeout(() => {
+          assert.isTrue(
+            store.dispatch.calledOnce,
+            'store.dispatch() should have been called.'
+          )
+          assert.isTrue(
+            successSpy.calledOnce,
+            'success() method should have been called.'
+          )
+          done()
+        })
       } )
     } )
 

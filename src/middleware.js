@@ -19,7 +19,9 @@ const defaultMiddlewareOpts = {
     API_ERROR,
     API_VOID
   },
-  fallbackToAxiosStatusResponse: true
+  handleStatusResponses: null,
+  fallbackToAxiosStatusResponse: true,
+  customSuccessResponses: null,
 }
 
 export let middlewareOpts = {}
@@ -233,7 +235,7 @@ const middleware = (options) => {
       _call = axios[ method ]( url, Object.assign( params, config ) )
     }
 
-    _call.then( response => {
+    _call.then( async (response) => {
       if ( typeof response.data !== 'object' ) {
         if ( typeof response.data === 'string' ) {
           return Promise.reject( response.data )
@@ -250,23 +252,54 @@ const middleware = (options) => {
         ? ( data.status || response.status )
         : data.status
 
-      if ( status !== 200 && status !== 201 && status !== 204 ) {
-        return Promise.reject( JSON.stringify( errors ) )
+      if ( typeof middlewareOpts.handleStatusResponses === 'function' ) {
+        const statusHandled = await middlewareOpts.handleStatusResponses( response, store )
+          .then(
+            // Resolve
+            () => {
+              return true
+            },
+            // Reject
+            (err) => {
+              return Promise.reject( err )
+            }
+          )
+
+        if ( statusHandled.constructor === Promise ) {
+          return statusHandled
+        }
+      } else if ( status !== 200 && status !== 201 && status !== 204 ) {
+        // If we have a custom success response and we received one that fits
+        // our array
+        if ( middlewareOpts.customSuccessResponses != null
+          && middlewareOpts.customSuccessResponses.constructor === Array
+          && middlewareOpts.customSuccessResponses.indexOf( status ) !== -1 ) {
+          // .. code
+        } else {
+          return Promise.reject( response )
+        }
       }
 
-      if ( error !== undefined
-        && error !== null
-        && error.constructor === String
-        && errors instanceof Array === false ) {
-        return Promise.reject( error )
-      }
+      /**
+       * In case we don't have a custom status reponse handler we will
+       * by default look for the keys `error` or `errors` in the response
+       * object to see if we should deal with them.
+       */
+      if ( typeof middlewareOpts.handleStatusResponses !== 'function' ) {
+        if ( error !== undefined
+          && error !== null
+          && error.constructor === String
+          && errors instanceof Array === false ) {
+          return Promise.reject( error )
+        }
 
-      if (
-        errors !== undefined
-        && errors !== null
-        && errors.constructor === Array
-        && errors.length > 0 ) {
-        return Promise.reject( JSON.stringify( errors ) )
+        if (
+          errors !== undefined
+          && errors !== null
+          && errors.constructor === Array
+          && errors.length > 0 ) {
+          return Promise.reject( errors )
+        }
       }
 
       /**

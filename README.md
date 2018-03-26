@@ -9,6 +9,13 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
         * [Basic set up](https://github.com/dawaa/redux-shapeshifter-middleware#a-very-basic-implementation)
         * [Detailed set up](https://github.com/dawaa/redux-shapeshifter-middleware#a-more-detailed-set-up-of-shapeshifter)
         * [Header authentication](https://github.com/dawaa/redux-shapeshifter-middleware#header-authentication)
+* [Middleware configuration](https://github.com/dawaa/redux-shapeshifter-middleware#middleware-configuration)
+    * [base](https://github.com/dawaa/redux-shapeshifter-middleware#base-string)
+    * [constants](https://github.com/dawaa/redux-shapeshifter-middleware#constants-object)
+    * [auth](https://github.com/dawaa/redux-shapeshifter-middleware#auth-object)
+    * [handleStatusResponses](https://github.com/dawaa/redux-shapeshifter-middleware#handlestatusresponses-function)
+    * [fallbackToAxiosStatusResponse](https://github.com/dawaa/redux-shapeshifter-middleware#fallbacktoaxiosstatusresponse-boolean)
+    * [customSuccessResponses](https://github.com/dawaa/redux-shapeshifter-middleware#customsuccessresponses-array)
 * [Action properties](https://github.com/dawaa/redux-shapeshifter-middleware#action-properties)
     * [type](https://github.com/dawaa/redux-shapeshifter-middleware#type-string)
     * [types](https://github.com/dawaa/redux-shapeshifter-middleware#types-array)
@@ -167,6 +174,122 @@ const shapeshifterOpts = {
 ```
 
 
+## Middleware configuration
+All options that the middleware can take.
+
+#### `base <string>`
+_`default: ''`_
+This sets the base url for all API calls being made through this middleware. Could be overwritten by using the `axios.baseURL` property on the Action.
+
+#### `constants <object>`
+* API `<string>` _default: 'API'_
+  This is the **type** this middleware will look for when actions are being dispatched.
+* API_ERROR `<string>` _default: 'API_ERROR'_
+  When an http request fails, this is the type that will be dispatched and could be used to return a visual response to the end-user e.g. on a failed login attempt.
+* API_VOID `<string>` _default: 'API_VOID'_
+  Upon success of a __generator__ function we have the choice to pass a type of our own, if the return statement is omitted or if there is no returned object with a key `type` then this will be dispatched as the `type` inside an object, along with another key `LAST_ACTION` which references the type that initiated the process.
+
+#### `auth <object>`
+_`default: undefined`_
+When making a request you can pass the `auth <boolean>` property to [`payload <object>`](https://github.com/dawaa/redux-shapeshifter-middleware#payload-function), doing this will activate this object which in return will pass the value as a parameter to the request being made.
+
+> Note that any properties or values passed within the auth {} object are connected to the Store.
+
+> It is not possible to mix __Example 1 and 2__ with __Example 3__
+
+__Example 1__ with a shallow value to check:
+```js
+const apiMiddleware = shapeshifter({
+  // .. retracted code
+  auth: {
+    user: 'sessionid'
+  }
+})
+```
+Looking at __Example 1__ it would on any HTTP request being made with `ACTION.payload.auth = true` would check the Store for the properties `user` and within that `sessionid` and pass the value found to the request as a parameter.
+
+__Example 2__ with a shallow value to disallow:
+```js
+const apiMiddleware = shapeshifter({
+  // .. retracted code
+  auth: {
+    user: 'sessionid',
+    profile: {
+      account: {
+        freeMember: false
+      }
+    }
+  }
+})
+```
+Passing a `boolean` as the value will check that the property does not exist on the current Store, if it does a warning will be emitted and the request will not be made. Could be done the other way around, if you pass `true` it would be required to have that property in the Store.. although it would be up to the back-end to evaluate the value coming from the Store in that case.
+
+__Example 3__ with a nested property and headers authorization:
+```js
+const apiMiddleware = shapeshifter({
+  // .. retracted code
+  auth: {
+    headers: {
+      'Authorization': 'Bearer #user.token',
+      
+      // or even deepter
+      'Authorization': 'Bearer #user.data.private.token',
+      
+      // or even multiple values
+      'cusotm-header': 'id=#user.id name=#user.private.name email=#user.private.data.email',
+    }
+  }
+})
+```
+__Example 3__ allows us to pass headers for authorization on requests having the `ACTION.payload.auth` set to __true__.
+
+#### `handleStatusResponses <function>`
+_`default: null`_
+* Arguments
+    * [response](https://github.com/axios/axios#response-schema) `<object>` The Axios response object.
+    * store `<object>`
+        * `#dispatch() <function>`
+        * `#getState <function>`
+        * `#state <object>`
+
+**NOTE** that this method __must__ return either `Promise.resolve()` or `Promise.reject()` depending on your own conditions.. 
+
+Defining this method means that any `customSuccessResponses` defined or any error handling done by the middleware will be ignored.. It's now up to you to deal with that however you like. So by returning a `Promise.reject()` the `*_FAILURE` Action would be dispatched or vice versa if you would return `Promise.resolve()`..
+
+Example
+```js
+const apiMiddleware = shapeshifter({
+    // .. retracted code
+    handleStatusResponses(response, store) {
+      if ( response.data && response.data.errors ) {
+        // Pass the error message or something similar along with the failed Action.
+        return Promise.reject( response.data.errors )
+      }
+
+      // No need to pass anything here since the execution will continue as per usual.
+      return Promise.resolve()
+    }
+})
+```
+
+
+#### `fallbackToAxiosStatusResponse <boolean>`
+_`default: true`_
+If you've built your own REST API and want to determine yourself what's right or wrong then setting this value to false would help you with that. Otherwise this would check the response object for a `status` key and if none exists it falls back to what Axios could tell from the request made.
+
+#### `customSuccessResponses <array>`
+_`default: null`_
+In case you are more "wordy" in your responses and your response object might look like:
+```json
+{
+  user: { name: 'DAwaa' },
+  status: 'success'
+}
+```
+
+Then you might want to consider adding 'success' to the array when initializing the middleware to let it know about your custom success response.
+
+
 
 ## Action properties
 We will explore what properties there are to be used for our new actions..
@@ -236,7 +359,7 @@ const anActionFn = () => ({
         WHATEVER_ACTION_FAILED
     ],
     payload: store => ({
-        // THESE PROPERTIES GO IN HERE <<<<<<
+        // THE BELOW PROPERTIES GO IN HERE <<<<<<
     })
 ```
 
