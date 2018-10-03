@@ -780,6 +780,60 @@ describe( 'shapeshifter middleware', () => {
           })
       } )
 
+      it ( 'Params should match using POST', async () => {
+        stubAxiosReturn({
+          method: 'post',
+          data: {
+            user: { name: 'Alejandro' },
+            status: 200
+          }
+        })
+        const tokenSpy  = sinon.spy()
+        const cancelSpy = sinon.spy()
+        const stubCancelToken = sandbox
+          .stub( CancelToken, 'source' )
+          .returns({
+            token  : tokenSpy,
+            cancel : cancelSpy,
+          })
+
+        const action = {
+          type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
+          method: 'post',
+          payload: () => ({
+            url: '/users/fetch',
+            params: {
+              user_id: 1,
+              username: 'dawaa',
+              email: 'dawaa@heaven.com'
+            },
+          })
+        }
+
+        const expected = {
+          args: {
+            params: {
+              user_id     : 1,
+              username    : 'dawaa',
+              email       : 'dawaa@heaven.com',
+              cancelToken : tokenSpy
+            }
+          }
+        }
+
+        await dispatch( action )
+
+        assert.deepEqual(
+          axios.post.args[ 0 ][ 1 ],
+          expected.args.params,
+        )
+      } )
+
       it ( 'Params should match without auth property', () => {
         stubAxiosReturn({
           data: {

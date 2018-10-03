@@ -202,7 +202,7 @@ const middleware = (options) => {
       meta.params = Object.assign( {}, parameters )
     }
 
-    const params = method === 'post' ? qs.stringify( parameters ) : { params: parameters }
+    const params = method === 'post' ? parameters : { params: parameters }
 
 
     const config = Object.assign(
