@@ -79,7 +79,14 @@ const middleware = (options) => {
       }
     }
 
-    const payload = action.payload({ dispatch, state: getState() })
+    // Prepare to cancel a request
+    const source = CancelToken.source()
+
+    const payload = action.payload({
+      dispatch,
+      state: getState(),
+      cancel: source.cancel,
+    })
 
     // Bail if the returned value of payload is not an object
     if ( typeof payload !== 'object' ) {
@@ -125,7 +132,9 @@ const middleware = (options) => {
         getState,
         state: getState()
       },
-      axios: axiosConfig = {}
+      axios: axiosConfig = {
+        cancelToken: source.token
+      }
     } = action;
 
     let REQUEST, SUCCESS, FAILURE;
@@ -137,17 +146,14 @@ const middleware = (options) => {
       [ REQUEST, SUCCESS, FAILURE ] = action.types
     }
 
-
+    // Only have one active request per Redux action
     const pendingCall = existsInStack( REQUEST )
     if ( pendingCall !== false ) {
       pendingCall.cancel( `${REQUEST} call was cancelled.` )
     }
 
     // Add call to callStack
-    const source = CancelToken.source()
     callStack.addToStack({ call: REQUEST, token: source.token, cancel: source.cancel })
-
-    parameters.cancelToken = source.token
 
     // Append current logged in user's session id to the call
     let authHeaders = false

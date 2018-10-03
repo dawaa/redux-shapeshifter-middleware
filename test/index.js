@@ -55,8 +55,16 @@ const stubAxiosReturn = ({ method = 'get', ...fake }) => {
 }
 
 describe( 'shapeshifter middleware', () => {
+  let stubCancelToken
   beforeEach(() => {
     setupMiddleware()
+
+    stubCancelToken = sandbox
+      .stub( CancelToken, 'source' )
+      .returns({
+        token  : sinon.spy(),
+        cancel : sinon.spy(),
+      })
   })
   afterEach(() => {
     sandbox.restore()
@@ -127,7 +135,7 @@ describe( 'shapeshifter middleware', () => {
       })
   } )
 
-  it ( 'should pass headers correctly to Axios call', () => {
+  it ( 'should pass headers correctly to Axios call', async () => {
     setupMiddleware({
       base : 'http://cp.api/v1',
       auth : {
@@ -142,12 +150,7 @@ describe( 'shapeshifter middleware', () => {
       }
     })
 
-    const tokenSpy        = sinon.spy()
-    const cancelSpy       = sinon.spy()
-    const stubCancelToken = sandbox.stub( CancelToken, 'source' ).returns({
-        token  : tokenSpy,
-        cancel : cancelSpy,
-      })
+    const { token } = CancelToken.source()
 
     const action = {
       ...createApiAction( 'FETCH_USER' ),
@@ -164,19 +167,18 @@ describe( 'shapeshifter middleware', () => {
           Authorization : 'Bearer verylongsupersecret123token456',
         },
         params  : {
-          cancelToken : tokenSpy,
-        }
+        },
+        cancelToken : token,
       }
     }
 
-    dispatch( action )
-      .finally(() => {
-        chai.assert.deepEqual(
-          stub.args[ 0 ][ 1 ],
-          expectedAxiosParams.config,
-          'The passed in config to Axios should match and should\'ve passed in Authorization header.'
-        )
-      })
+    await dispatch( action )
+
+    chai.assert.deepEqual(
+      stub.args[ 0 ][ 1 ],
+      expectedAxiosParams.config,
+      'The passed in config to Axios should match and should\'ve passed in Authorization header.'
+    )
   } )
 
   it ( 'should correctly pass options to axios config parameter', () => {
@@ -277,13 +279,16 @@ describe( 'shapeshifter middleware', () => {
       }
     }
 
+    const { cancel } = CancelToken.source()
+
     dispatch( action )
 
     chai.assert.isTrue( payloadSpy.called )
     chai.assert.isTrue(
       payloadSpy.calledWith({
         dispatch: store.dispatch,
-        state:    store.getState()
+        state:    store.getState(),
+        cancel:   cancel,
       })
     )
   } )
@@ -364,12 +369,12 @@ describe( 'shapeshifter middleware', () => {
       dispatch( action )
 
       const firstCall = addToStackSpy.firstCall
-      const firstActionCancelSpy = sandbox.spy( firstCall.args[ 0 ], 'cancel' )
+      const { cancel } = CancelToken.source()
 
       dispatch( actionTwo )
 
       chai.assert.isTrue(
-        firstActionCancelSpy.called,
+        cancel.called,
         'First dispatched Action should have been cancelled.'
       )
     } )
@@ -788,14 +793,8 @@ describe( 'shapeshifter middleware', () => {
             status: 200
           }
         })
-        const tokenSpy  = sinon.spy()
-        const cancelSpy = sinon.spy()
-        const stubCancelToken = sandbox
-          .stub( CancelToken, 'source' )
-          .returns({
-            token  : tokenSpy,
-            cancel : cancelSpy,
-          })
+
+        const { token } = CancelToken.source()
 
         const action = {
           type: 'API',
@@ -821,8 +820,8 @@ describe( 'shapeshifter middleware', () => {
               user_id     : 1,
               username    : 'dawaa',
               email       : 'dawaa@heaven.com',
-              cancelToken : tokenSpy
-            }
+            },
+            cancelToken : token
           }
         }
 
@@ -834,6 +833,34 @@ describe( 'shapeshifter middleware', () => {
         )
       } )
 
+      it ( 'should not append anything if just a GET request is made', async () => {
+        stubAxiosReturn({
+          data: {
+            user: { name: 'Alejandro' },
+            status: 200
+          }
+        })
+
+        const action = {
+          type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED'
+          ],
+          payload: () => ({
+            url: '/users/fetch',
+          })
+        }
+
+        await dispatch( action )
+
+        assert.deepEqual(
+          axios.get.args[ 0 ][ 1 ].params,
+          {},
+        )
+      } )
+
       it ( 'Params should match without auth property', () => {
         stubAxiosReturn({
           data: {
@@ -841,14 +868,7 @@ describe( 'shapeshifter middleware', () => {
             status: 200
           }
         })
-        const tokenSpy  = sinon.spy()
-        const cancelSpy = sinon.spy()
-        const stubCancelToken = sandbox
-          .stub( CancelToken, 'source' )
-          .returns({
-            token  : tokenSpy,
-            cancel : cancelSpy,
-          })
+        const { token } = CancelToken.source()
 
         const action = {
           type: 'API',
@@ -871,8 +891,8 @@ describe( 'shapeshifter middleware', () => {
             params: {
               username    : 'dawaa',
               email       : 'dawaa@heaven.com',
-              cancelToken : tokenSpy
-            }
+            },
+            cancelToken: token,
           }
         }
 
@@ -890,14 +910,8 @@ describe( 'shapeshifter middleware', () => {
             status: 200
           }
         })
-        const tokenSpy  = sinon.spy()
-        const cancelSpy = sinon.spy()
-        const stubCancelToken = sandbox
-          .stub( CancelToken, 'source' )
-          .returns({
-            token  : tokenSpy,
-            cancel : cancelSpy,
-          })
+
+        const { token } = CancelToken.source()
 
         const action = {
           type: 'API',
@@ -919,11 +933,11 @@ describe( 'shapeshifter middleware', () => {
         const expected = {
           args: {
             params: {
-              username    : 'dawaa',
-              email       : 'dawaa@heaven.com',
-              sessionid   : 'abc123',
-              cancelToken : tokenSpy,
-            }
+              username  : 'dawaa',
+              email     : 'dawaa@heaven.com',
+              sessionid : 'abc123',
+            },
+            cancelToken: token,
           }
         }
 
@@ -1081,13 +1095,7 @@ describe( 'shapeshifter middleware', () => {
           }
         })
 
-        const spy       = sinon.spy()
-        const tokenSpy  = sinon.spy()
-        const cancelSpy = sinon.spy()
-        const stubCancelToken = sandbox.stub( CancelToken, 'source' ).returns({
-          token  : tokenSpy,
-          cancel : cancelSpy,
-        })
+        const spy = sinon.spy()
 
         const action = {
           type: 'API',
@@ -1126,7 +1134,6 @@ describe( 'shapeshifter middleware', () => {
             params: {
               userName    : 'dawaa',
               sessionid   : 'abc123',
-              cancelToken : tokenSpy
             },
             args: {
               extraParameter: 'This is an extra param!'
@@ -1155,12 +1162,7 @@ describe( 'shapeshifter middleware', () => {
             status: 200
           }
         })
-        const tokenSpy  = sinon.spy()
-        const cancelSpy = sinon.spy()
-        const stubCancelToken = sandbox.stub( CancelToken, 'source' ).returns({
-          token  : tokenSpy,
-          cancel : cancelSpy,
-        })
+        const { token } = CancelToken.source()
 
         const action = {
           type: 'API',
@@ -1187,8 +1189,8 @@ describe( 'shapeshifter middleware', () => {
           args: {
             params: {
               sessionid   : 'abc123',
-              cancelToken : tokenSpy,
-            }
+            },
+            cancelToken : token,
           }
         }
 
@@ -1208,13 +1210,7 @@ describe( 'shapeshifter middleware', () => {
           }
         })
 
-        const spy       = sinon.spy()
-        const tokenSpy  = sinon.spy()
-        const cancelSpy = sinon.spy()
-        const stubCancelToken = sandbox.stub( CancelToken, 'source' ).returns({
-          token  : tokenSpy,
-          cancel : cancelSpy,
-        })
+        const spy = sinon.spy()
 
         const action = {
           type: 'API',
@@ -1243,7 +1239,6 @@ describe( 'shapeshifter middleware', () => {
           params: {
             randomThought : 'Shower is taking a stand up bath',
             sessionid     : 'abc123',
-            cancelToken   : tokenSpy,
           },
           dispatch: store.dispatch,
           state: store.getState(),
