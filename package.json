@@ -2,7 +2,7 @@
   "name": "redux-shapeshifter-middleware",
   "version": "0.6.2",
   "description": "Redux middleware for empowering your actions using `axios` and `qs` libraries combined.",
-  "main": "./build/redux-shapeshifter-middleware.min.js",
+  "main": "./lib/middleware.js",
   "author": "Alejandro Andersson <alejandro.andersson@hyperisland.se>",
   "repository": {
     "type": "git",
@@ -14,12 +14,11 @@
   },
   "license": "MIT",
   "scripts": {
-    "prepublish": "yarn run test && yarn run build:prod:umd",
+    "prepublish": "yarn run test && yarn run build:babel",
     "test": "cross-env BABEL_ENV=commonjs nyc mocha --require babel-polyfill --require babel-core/register --reporter spec test/*.js",
-    "test:debug": "./node_modules/.bin/mocha --inspect --require babel-polyfill --require babel-core/register test/*.js",
+    "test:debug": "mocha --inspect --require babel-polyfill --require babel-core/register test/*.js",
     "test:watch": "yarn run test --watch",
-    "build:umd": "cross-env BABEL_ENV=commonjs NODE_ENV=development webpack",
-    "build:prod:umd": "cross-env BABEL_ENV=commonjs NODE_ENV=production webpack"
+    "build:babel": "rimraf ./lib && babel src --out-dir lib --copy-files"
   },
   "keywords": [
     "redux",
@@ -38,20 +37,17 @@
     "ajax",
     "http"
   ],
-  "files": [
-    "build/redux-shapeshifter-middleware.min.js"
-  ],
   "dependencies": {
     "axios": "^0.17.0",
-    "qs": "^6.5.1",
     "babel-plugin-transform-regenerator": "^6.26.0",
-    "babel-polyfill": "^6.26.0"
+    "babel-polyfill": "^6.26.0",
+    "qs": "^6.5.1"
   },
   "peerDependencies": {
     "axios": ">= 0.17",
-    "qs": "^6.5.1",
     "babel-plugin-transform-regenerator": "^6.26.0",
-    "babel-polyfill": "^6.26.0"
+    "babel-polyfill": "^6.26.0",
+    "qs": "^6.5.1"
   },
   "devDependencies": {
     "axios": "^0.17.0",
