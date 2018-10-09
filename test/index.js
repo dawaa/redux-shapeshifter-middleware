@@ -11,10 +11,10 @@ import { isGeneratorFn } from '../src/generator'
 import shapeshifter, {
   middlewareOpts,
   addToStack,
-  removeFromStack
+  removeFromStack,
+  urlETags,
 } from '../src/middleware'
 import * as callStack from '../src/callStack'
-// import * as mdw from '../src/middleware'
 
 const { assert } = chai
 
@@ -85,6 +85,7 @@ describe( 'shapeshifter middleware', () => {
       handleStatusResponses: null,
       fallbackToAxiosStatusResponse: true,
       customSuccessResponses: null,
+      useETags: false,
     } )
   } )
 
@@ -128,6 +129,7 @@ describe( 'shapeshifter middleware', () => {
               handleStatusResponses: null,
               fallbackToAxiosStatusResponse: true,
               customSuccessResponses: null,
+              useETags: false,
             }
           )
           done()
@@ -218,6 +220,128 @@ describe( 'shapeshifter middleware', () => {
         )
       })
 
+  } )
+
+  it ( 'should correctly merge headers if auth is also passed', async () => {
+    setupMiddleware({
+      base : 'http://cp.api/v1',
+      auth : {
+        headers : {
+          'Authorization' : 'Bearer #user.token'
+        }
+      }
+    })
+    const { stub } = stubAxiosReturn({
+      data: {
+        status: 200
+      }
+    })
+
+    const { token } = CancelToken.source()
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url  : '/users/fetch',
+        auth : true, // Note this is important if we want to actually
+                     // make sure the middleware looks at the Store
+      }),
+      axios: {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    }
+
+    const expectedAxiosParams = {
+      config : {
+        headers : {
+          Authorization  : 'Bearer verylongsupersecret123token456',
+          'Content-Type' : 'application/json',
+        },
+        params  : {
+        },
+      }
+    }
+
+    await dispatch( action )
+
+    chai.assert.deepEqual(
+      stub.args[ 0 ][ 1 ],
+      expectedAxiosParams.config,
+      'The passed in config to Axios should match and should\'ve passed in Authorization header as well as custom headers.'
+    )
+  } )
+
+  it ( 'should track ETag(s) and save it to an object by URI segments', async () => {
+    setupMiddleware({
+      base     : 'http://cp.api/v1',
+      useETags : true,
+    })
+    const { stub } = stubAxiosReturn({
+      data: {
+        user: { name: 'Alejandro' },
+        status: 200
+      },
+      headers: {
+        ETag: 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
+      },
+    })
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+      })
+    }
+
+    await dispatch( action )
+
+    assert.isNotNull( urlETags[ '/users/fetch' ] )
+    assert.strictEqual(
+      urlETags[ '/users/fetch' ],
+      'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"',
+    )
+
+    delete urlETags[ '/users/fetch' ]
+  } )
+
+  it ( 'should add extra headers if ETag exists for URI segments', async () => {
+    setupMiddleware({
+      base     : 'http://cp.api/v1',
+      useETags : true,
+    })
+
+    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
+    urlETags[ '/users/fetch' ] = ETag
+
+    const { stub } = stubAxiosReturn({
+      data: {
+        user: { name: 'Alejandro' },
+        status: 200
+      },
+      headers: {
+        ETag,
+      },
+    })
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+      })
+    }
+
+    await dispatch( action )
+
+    assert.deepEqual(
+      stub.args[ 0 ][ 1 ].headers,
+      {
+        'If-None-Match': ETag,
+        'Cache-Control': 'private, must-revalidate',
+      },
+    )
+    delete urlETags[ '/users/fetch' ]
   } )
 
   it ( 'should ignore action if not of type API', () => {
