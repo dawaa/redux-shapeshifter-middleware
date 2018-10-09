@@ -267,9 +267,6 @@ const middleware = (options) => {
       const { data, headers = {} } = response
       const { errors, error }      = data
 
-      const hasEtag = Object.keys( headers )
-        .filter( x => x.toLowerCase() === 'etag' )
-
       const normalizedHeaders = {}
 
       Object.keys( headers ).forEach( headerKey => {
