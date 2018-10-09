@@ -264,11 +264,21 @@ const middleware = (options) => {
         return Promise.reject( 'Something went wrong with the API call.' )
       }
 
-      const { data, headers } = response
-      const { errors, error } = data
+      const { data, headers = {} } = response
+      const { errors, error }      = data
 
-      if ( middlewareOpts.useETags && headers && headers.ETag ) {
-        urlETags[ uris ] = headers.ETag
+      const hasEtag = Object.keys( headers )
+        .filter( x => x.toLowerCase() === 'etag' )
+
+      const normalizedHeaders = {}
+
+      Object.keys( headers ).forEach( headerKey => {
+        const header = headers[ headerKey ]
+        normalizedHeaders[ headerKey.toLowerCase() ] = header
+      } )
+
+      if ( middlewareOpts.useETags && normalizedHeaders.etag ) {
+        urlETags[ uris ] = normalizedHeaders.etag
       }
 
       // Try catching the response status from the API call, otherwise
