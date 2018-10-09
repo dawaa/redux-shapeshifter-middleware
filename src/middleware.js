@@ -21,9 +21,11 @@ const defaultMiddlewareOpts = {
   handleStatusResponses: null,
   fallbackToAxiosStatusResponse: true,
   customSuccessResponses: null,
+  useETags: false,
 }
 
 export let middlewareOpts = {}
+export const urlETags = {}
 
 const middleware = (options) => {
   middlewareOpts = {
@@ -135,6 +137,12 @@ const middleware = (options) => {
         cancelToken: source.token
       }
     } = action;
+
+    if ( middlewareOpts.useETags && urlETags[ uris ] ) {
+      axiosConfig.headers = axiosConfig.headers || {}
+      axiosConfig.headers[ 'If-None-Match' ] = urlETags[ uris ]
+      axiosConfig.headers[ 'Cache-Control' ] = 'private, must-revalidate'
+    }
 
     let REQUEST, SUCCESS, FAILURE;
     if ( action.payload.types && action.payload.types.constructor === Array ) {
@@ -256,8 +264,12 @@ const middleware = (options) => {
         return Promise.reject( 'Something went wrong with the API call.' )
       }
 
-      const { data }          = response
+      const { data, headers } = response
       const { errors, error } = data
+
+      if ( middlewareOpts.useETags && headers && headers.ETag ) {
+        urlETags[ uris ] = headers.ETag
+      }
 
       // Try catching the response status from the API call, otherwise
       // fallback to Axios own status response.
