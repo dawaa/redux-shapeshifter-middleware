@@ -209,12 +209,20 @@ const middleware = (options) => {
 
     const params = method === 'post' ? parameters : { params: parameters }
 
-
     const config = Object.assign(
       {},
       axiosConfig,
       (
-        authHeaders ? { headers: middlewareOpts.auth.headers } : {}
+        axiosConfig.headers || authHeaders
+        ?
+          {
+            headers: {
+              ...(axiosConfig.headers ? axiosConfig.headers : {}),
+              ...(authHeaders ? middlewareOpts.auth.headers : {}),
+            }
+          }
+        :
+          {}
       )
     )
 

@@ -220,6 +220,57 @@ describe( 'shapeshifter middleware', () => {
 
   } )
 
+  it ( 'should correctly merge headers if auth is also passed', async () => {
+    setupMiddleware({
+      base : 'http://cp.api/v1',
+      auth : {
+        headers : {
+          'Authorization' : 'Bearer #user.token'
+        }
+      }
+    })
+    const { stub } = stubAxiosReturn({
+      data: {
+        status: 200
+      }
+    })
+
+    const { token } = CancelToken.source()
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url  : '/users/fetch',
+        auth : true, // Note this is important if we want to actually
+                     // make sure the middleware looks at the Store
+      }),
+      axios: {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    }
+
+    const expectedAxiosParams = {
+      config : {
+        headers : {
+          Authorization  : 'Bearer verylongsupersecret123token456',
+          'Content-Type' : 'application/json',
+        },
+        params  : {
+        },
+      }
+    }
+
+    await dispatch( action )
+
+    chai.assert.deepEqual(
+      stub.args[ 0 ][ 1 ],
+      expectedAxiosParams.config,
+      'The passed in config to Axios should match and should\'ve passed in Authorization header as well as custom headers.'
+    )
+  } )
+
   it ( 'should ignore action if not of type API', () => {
     const action = { type: 'MISS_ME', payload: {} }
     dispatch( action )
