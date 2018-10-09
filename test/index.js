@@ -14,7 +14,6 @@ import shapeshifter, {
   removeFromStack
 } from '../src/middleware'
 import * as callStack from '../src/callStack'
-// import * as mdw from '../src/middleware'
 
 const { assert } = chai
 

@@ -14,8 +14,6 @@ export function removeFromStack(call) {
 
   callStack.find((x, i) => {
     if ( x.call === call && found === false ) {
-      // console.log('found something');
-      // console.log( x );
       found = true
       return index = i
     }
@@ -26,7 +24,4 @@ export function removeFromStack(call) {
   if ( index != null ) {
     callStack.splice( index, 1 )
   }
-
-  // console.log('call stack  AFTER');
-  // console.log( callStack );
 }
