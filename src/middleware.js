@@ -1,6 +1,5 @@
 // external
 import axios, { CancelToken } from 'axios'
-import qs                     from 'qs'
 
 // internal
 import recursiveObjFind                from './recursiveObjFind'
