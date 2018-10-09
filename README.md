@@ -67,10 +67,11 @@ const apiMiddleware = shapeshifter({
     fallbackToAxiosStatusResponse: true, // default is: true
     // Above tells the middleware to fallback to Axios status response if
     // the data response from the API call is missing the property `status`.
-    // 
+    //
     // If you however would like to deal with the status responses yourself you might
     // want to set this to false and then in the response object from your back-end
     // always provide a `status` property.
+    useETags: false, // default is: false
 })
 
 const store = createStore(
@@ -101,11 +102,11 @@ const shapeshifterOpts = {
             // the back-end would have to deal with the incoming data.
         }
     },
-    
+
     /**
      * constants.API
      *  Tells the middleware what action type it should act on
-     * 
+     *
      * constants.API_ERROR
      *  If back-end responds with an error or call didn't go through,
      *  middleware will emit 'API_ERROR'.. Unless you specified your own
@@ -169,7 +170,7 @@ const shapeshifterOpts = {
         }
     },
     // .. retracted code, because it's the same as above.
-}    
+}
 // .. retracted code, because it's the same as above.
 ```
 
@@ -233,10 +234,10 @@ const apiMiddleware = shapeshifter({
   auth: {
     headers: {
       'Authorization': 'Bearer #user.token',
-      
+
       // or even deepter
       'Authorization': 'Bearer #user.data.private.token',
-      
+
       // or even multiple values
       'cusotm-header': 'id=#user.id name=#user.private.name email=#user.private.data.email',
     }
@@ -244,6 +245,11 @@ const apiMiddleware = shapeshifter({
 })
 ```
 __Example 3__ allows us to pass headers for authorization on requests having the `ACTION.payload.auth` set to __true__.
+
+#### `useETags <boolean>`
+_`default: false`_
+
+This will enable the middleware to store ETag(s) if they exist in the response with the URI segments as the key.
 
 #### `handleStatusResponses <function>`
 _`default: null`_
@@ -255,7 +261,7 @@ _`default: null`_
         * `#getState <function>`
         * `#state <object>`
 
-**NOTE** that this method __must__ return either `Promise.resolve()` or `Promise.reject()` depending on your own conditions.. 
+**NOTE** that this method __must__ return either `Promise.resolve()` or `Promise.reject()` depending on your own conditions..
 
 Defining this method means that any `customSuccessResponses` defined or any error handling done by the middleware will be ignored.. It's now up to you to deal with that however you like. So by returning a `Promise.reject()` the `*_FAILURE` Action would be dispatched or vice versa if you would return `Promise.resolve()`..
 
@@ -333,7 +339,7 @@ ______________________________________________________
         * `#dispatch() <function>`
         * `#state <object>`
 
-This property and its value is what actually defines the API call we want to make. 
+This property and its value is what actually defines the API call we want to make.
 
 **Note**
 Payload **must** return an object. Easiest done using a fat-arrow function like below.
@@ -376,7 +382,7 @@ const anActionFn = () => ({
         * `params <object>`
         * `dispatch <function>`
         * `state <object>`
-        * `getState <function>` 
+        * `getState <function>`
 
 
 Is called before the API request is made, also the function receives an object argument.
@@ -404,7 +410,7 @@ This method is run if the API call responds with an error from the back-end.
         * `params <object>`
         * `dispatch <function>`
         * `state <object>`
-        * `getState <function>` 
+        * `getState <function>`
 
 Same as `tapBeforeCall <function>` but is called **after** the API request was made.
 
@@ -502,6 +508,7 @@ export const fetchAllUsers = () => ({
         FETCH_ALL_USERS_SUCCESS,
         FETCH_ALL_USERS_FAILED
     ],
+    method: 'get', // default is 'get' - this could be omitted in this case
     payload: ({ dispatch, state }) => ({
         url: '/users/all',
         success: success,
@@ -529,7 +536,7 @@ export const FETCH_USER_FAILED  = 'API/FETCH_USER_FAILED'
 const success = function* (type, payload, { dispatch, state }) {
     // Get the USER id
     const userId = payload.user.id
-    
+
     // Fetch name of user
     const myName = yield new Promise((resolve, reject) => {
         axios.get('some-weird-url', { id: userId })
@@ -538,9 +545,9 @@ const success = function* (type, payload, { dispatch, state }) {
                 resolve( response.name );
             })
     })
-    
+
     dispatch({ type: 'MY_NAME_IS_WHAT', name: myName })
-    
+
     // Conditionally if we want to emit to the
     // system that the call is done.
     return {
@@ -568,6 +575,7 @@ export const fetchAllUsers = userId => ({
         FETCH_USER_SUCCESS,
         FETCH_USER_FAILED
     ],
+    method: 'get', // default is 'get' - this could be omitted in this case
     payload: ({ dispatch, state }) => ({
         url: '/fetch-user-without-their-name',
         params: {
