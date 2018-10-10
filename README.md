@@ -22,6 +22,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
 * [Action properties](#action-properties)
     * [type](#type-string)
     * [types](#types-array)
+    * [method](#method-string)
     * [payload](#payload-function)
         * [payload properties](#inside-payload-properties)
             * [url](#url-string)
@@ -374,7 +375,22 @@ const anActionFn = () => ({
     ]
 })
 ```
+______________________________________________________
 
+#### `method <string>`
+Default is "**get**".
+
+```javascript
+const anActionFn = () => ({
+    type: 'API',
+    types: [
+        WHATEVER_ACTION,
+        WHATEVER_ACTION_SUCCESS,
+        WHATEVER_ACTION_FAILED
+    ],
+    method: 'post' // default is: get
+})
+```
 ______________________________________________________
 
 #### `payload <function>`
