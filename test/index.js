@@ -86,6 +86,7 @@ describe( 'shapeshifter middleware', () => {
       handleStatusResponses: null,
       fallbackToAxiosStatusResponse: true,
       customSuccessResponses: null,
+      useOnlyAxiosStatusResponse: false,
       useETags: false,
     } )
   } )
@@ -130,12 +131,41 @@ describe( 'shapeshifter middleware', () => {
               handleStatusResponses: null,
               fallbackToAxiosStatusResponse: true,
               customSuccessResponses: null,
+              useOnlyAxiosStatusResponse: false,
               useETags: false,
             }
           )
           done()
         })
       })
+  } )
+
+  it ( 'should ignore other rules if `useOnlyAxiosStatusResponse` is set to true', async () => {
+    setupMiddleware({
+      base : 'http://cp.api/v1',
+      fallbackToAxiosStatusResponse: true,
+      customSuccessResponses: [ 'success' ],
+      useOnlyAxiosStatusResponse: true,
+    })
+    const { stub } = stubAxiosReturn({
+      data: {
+        status: 'not-part-of-a-custom-success'
+      },
+      status: 200
+    })
+
+    const spy = sandbox.spy()
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload : () => ({
+        url     : '/users/fetch',
+        success : spy,
+      })
+    }
+
+    await dispatch( action )
+
+    assert.strictEqual( spy.calledOnce, true )
   } )
 
   it ( 'should pass headers correctly to Axios call', async () => {
