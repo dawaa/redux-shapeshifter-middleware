@@ -339,11 +339,6 @@ _`default: true`_
 
 If you've built your own REST API and want to determine yourself what's right or wrong then setting this value to false would help you with that. Otherwise this would check the response object for a `status` key and if none exists it falls back to what Axios could tell from the request made.
 
-#### `useOnlyAxiosStatusResponse <boolean>`
-_`default: false`_
-
-This ignores [`fallbackToAxiosStatusResponse`](#fallbacktoaxiosstatusresponse-boolean) and [`customSuccessResponses`](#customsuccessresponses-array), this means it only looks at the status code from the Axios response object.
-
 #### `customSuccessResponses <array>`
 _`default: null`_
 
@@ -358,6 +353,11 @@ In case you are more "wordy" in your responses and your response object might lo
 ```
 
 Then you might want to consider adding 'success' to the array when initializing the middleware to let it know about your custom success response.
+
+#### `useOnlyAxiosStatusResponse <boolean>`
+_`default: false`_
+
+This ignores [`fallbackToAxiosStatusResponse`](#fallbacktoaxiosstatusresponse-boolean) and [`customSuccessResponses`](#customsuccessresponses-array), this means it only looks at the status code from the Axios response object.
 
 
 
