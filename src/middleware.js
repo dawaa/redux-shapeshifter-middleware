@@ -122,7 +122,7 @@ const middleware = (options) => {
         success = () => {},
         failure = (type, error) => ({
           type: constants.API_ERROR,
-          message: `${ type } failed.. lol`,
+          message: `${ type } failed.`,
           error
         }),
         ETagCallback = () => {},

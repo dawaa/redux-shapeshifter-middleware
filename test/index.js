@@ -727,7 +727,7 @@ describe( 'shapeshifter middleware', () => {
 
         const expectedAction = {
           type: 'API_ERROR',
-          message: 'FETCH_USER_FAILED failed.. lol',
+          message: 'FETCH_USER_FAILED failed.',
           error: 'Failed to do stuff.'
         }
 
@@ -1094,7 +1094,7 @@ describe( 'shapeshifter middleware', () => {
 
         const expectedAction = {
           type    : 'API_ERROR',
-          message : 'FETCH_USER_FAILED failed.. lol',
+          message : 'FETCH_USER_FAILED failed.',
           error   : {
             data : {
               errors : [ 'Error authorizing or something' ],
