@@ -21,6 +21,7 @@ const defaultMiddlewareOpts = {
   handleStatusResponses: null,
   fallbackToAxiosStatusResponse: true,
   customSuccessResponses: null,
+  useOnlyAxiosStatusResponse: false,
   useETags: false,
 }
 
@@ -42,7 +43,12 @@ const middleware = (options) => {
    * @return Promise
    */
   return ({ dispatch, getState }) => next => action => {
-    const { base, constants, fallbackToAxiosStatusResponse } = middlewareOpts;
+    const {
+      base,
+      constants,
+      fallbackToAxiosStatusResponse,
+      useOnlyAxiosStatusResponse,
+    } = middlewareOpts;
 
     // Bail if not an API action
     if ( action.type !== constants.API ) return next( action )
@@ -310,9 +316,15 @@ const middleware = (options) => {
 
       // Try catching the response status from the API call, otherwise
       // fallback to Axios own status response.
-      const status = fallbackToAxiosStatusResponse
-        ? ( data.status || response.status )
-        : data.status
+      const status = (
+        fallbackToAxiosStatusResponse && ! useOnlyAxiosStatusResponse
+          ? ( data.status || response.status )
+          : (
+            useOnlyAxiosStatusResponse
+              ? response.status
+              : data.status
+          )
+      )
 
       if ( typeof middlewareOpts.handleStatusResponses === 'function' ) {
         const statusHandled = await middlewareOpts.handleStatusResponses( response, store )

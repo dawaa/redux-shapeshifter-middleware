@@ -16,6 +16,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
     * [handleStatusResponses](#handlestatusresponses-function)
     * [fallbackToAxiosStatusResponse](#fallbacktoaxiosstatusresponse-boolean)
     * [customSuccessResponses](#customsuccessresponses-array)
+    * [useOnlyAxiosStatusResponse](#useonlyaxiosstatusresponse-boolean)
     * [useETags](#useetags-boolean)
     * [dispatchETagCreationType](#dispatchetagcreationtype-string)
     * [matchingETagHeaders](#matchingetagheaders-function)
@@ -76,6 +77,12 @@ const apiMiddleware = shapeshifter({
     // If you however would like to deal with the status responses yourself you might
     // want to set this to false and then in the response object from your back-end
     // always provide a `status` property.
+    useOnlyAxiosStatusResponse: true // default is: false
+    // Above would ignore `fallbackToAxiosStatusResponse` and
+    // `customSuccessResponses` if set to true. This means that we will use
+    // Axios response object and its status code instead of relying on one
+    // passed to the response.data object, or fallbacking to response.status
+    // if response.data.status is missing.
     useETags: false, // default is: false
 })
 
@@ -346,6 +353,11 @@ In case you are more "wordy" in your responses and your response object might lo
 ```
 
 Then you might want to consider adding 'success' to the array when initializing the middleware to let it know about your custom success response.
+
+#### `useOnlyAxiosStatusResponse <boolean>`
+_`default: false`_
+
+This ignores [`fallbackToAxiosStatusResponse`](#fallbacktoaxiosstatusresponse-boolean) and [`customSuccessResponses`](#customsuccessresponses-array), this means it only looks at the status code from the Axios response object.
 
 
 
