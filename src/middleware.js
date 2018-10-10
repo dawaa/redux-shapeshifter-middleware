@@ -450,6 +450,8 @@ const middleware = (options) => {
           } else if ( cb.constructor === Function ) {
             return cb( store === null ? meta : store )
           }
+
+          return
         }
 
         dispatch( failure( FAILURE, error ) )
