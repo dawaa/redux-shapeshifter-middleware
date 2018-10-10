@@ -239,11 +239,11 @@ const apiMiddleware = shapeshifter({
     headers: {
       'Authorization': 'Bearer #user.token',
 
-      // or even deepter
+      // or even deeper
       'Authorization': 'Bearer #user.data.private.token',
 
       // or even multiple values
-      'cusotm-header': 'id=#user.id name=#user.private.name email=#user.private.data.email',
+      'custom-header': 'id=#user.id name=#user.private.name email=#user.private.data.email',
     }
   }
 })
