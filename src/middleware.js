@@ -122,9 +122,10 @@ const middleware = (options) => {
         success = () => {},
         failure = (type, error) => ({
           type: constants.API_ERROR,
-          message: `${ type } failed.. lol`,
+          message: `${ type } failed.`,
           error
         }),
+        ETagCallback = () => {},
         tapBeforeCall = undefined,
         tapAfterCall = undefined
       },
@@ -140,8 +141,29 @@ const middleware = (options) => {
 
     if ( middlewareOpts.useETags && urlETags[ uris ] ) {
       axiosConfig.headers = axiosConfig.headers || {}
-      axiosConfig.headers[ 'If-None-Match' ] = urlETags[ uris ]
-      axiosConfig.headers[ 'Cache-Control' ] = 'private, must-revalidate'
+      if ( middlewareOpts.matchingETagHeaders
+        && middlewareOpts.matchingETagHeaders.constructor === Function ) {
+        const ETagHeaders = middlewareOpts.matchingETagHeaders({
+          ETag: urlETags[ uris ],
+          dispatch,
+          state: getState(),
+          getState,
+        })
+
+        if ( typeof ETagHeaders !== 'object' ) {
+          throw new Error(
+            `Received ETagHeaders as a function but the returned value was not of type object.`
+          )
+        }
+
+        axiosConfig.headers = {
+          ...axiosConfig.headers,
+          ...ETagHeaders,
+        }
+      } else {
+        axiosConfig.headers[ 'If-None-Match' ] = urlETags[ uris ]
+        axiosConfig.headers[ 'Cache-Control' ] = 'private, must-revalidate'
+      }
     }
 
     let REQUEST, SUCCESS, FAILURE;
@@ -276,6 +298,14 @@ const middleware = (options) => {
 
       if ( middlewareOpts.useETags && normalizedHeaders.etag ) {
         urlETags[ uris ] = normalizedHeaders.etag
+
+        if ( middlewareOpts.dispatchETagCreationType ) {
+          dispatch({
+            type: middlewareOpts.dispatchETagCreationType,
+            ETag: normalizedHeaders.etag,
+            key: uris,
+          })
+        }
       }
 
       // Try catching the response status from the API call, otherwise
@@ -300,7 +330,9 @@ const middleware = (options) => {
         if ( statusHandled.constructor === Promise ) {
           return statusHandled
         }
-      } else if ( status !== 200 && status !== 201 && status !== 204 ) {
+      } else if ( status !== 200
+        && status !== 201
+        && status !== 204 ) {
         // If we have a custom success response and we received one that fits
         // our array
         if ( middlewareOpts.customSuccessResponses != null
@@ -409,6 +441,16 @@ const middleware = (options) => {
       .catch( error => {
         // Remove call from callStack when finished
         removeFromStack( REQUEST )
+
+        if ( error && error.response && error.response.status === 304 ) {
+          const cb = ETagCallback
+
+          if ( cb.constructor === Object ) {
+            return dispatch( cb )
+          } else if ( cb.constructor === Function ) {
+            return cb( store === null ? meta : store )
+          }
+        }
 
         dispatch( failure( FAILURE, error ) )
       })

@@ -7,6 +7,7 @@ import decache                from 'decache'
 chai.use( sinonChai )
 
 // internal
+import flushPromises     from '../src/flushPromises'
 import { isGeneratorFn } from '../src/generator'
 import shapeshifter, {
   middlewareOpts,
@@ -306,7 +307,7 @@ describe( 'shapeshifter middleware', () => {
     delete urlETags[ '/users/fetch' ]
   } )
 
-  it ( 'should add extra headers if ETag exists for URI segments', async () => {
+  it ( 'should add default extra headers if ETag exists for URI segments', async () => {
     setupMiddleware({
       base     : 'http://cp.api/v1',
       useETags : true,
@@ -341,6 +342,216 @@ describe( 'shapeshifter middleware', () => {
         'Cache-Control': 'private, must-revalidate',
       },
     )
+    delete urlETags[ '/users/fetch' ]
+  } )
+
+  it ( 'should add custom extra headers if ETag exists for URI segments', async () => {
+    setupMiddleware({
+      base     : 'http://cp.api/v1',
+      useETags : true,
+      matchingETagHeaders: ({ ETag, state }) => ({
+        'a-custom-header': 'awesome',
+        'user-session-id': state.user.sessionid,
+        'If-None-Match': ETag,
+      }),
+    })
+
+    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
+    urlETags[ '/users/fetch' ] = ETag
+
+    const { stub } = stubAxiosReturn({
+      data: {
+        user: { name: 'Alejandro' },
+        status: 200
+      },
+      headers: {
+        ETag,
+      },
+    })
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+      })
+    }
+
+    await dispatch( action )
+
+    assert.deepEqual(
+      stub.args[ 0 ][ 1 ].headers,
+      {
+        'a-custom-header' : 'awesome',
+        'user-session-id' : 'abc123',
+        'If-None-Match'   : ETag,
+      },
+    )
+    delete urlETags[ '/users/fetch' ]
+  } )
+
+  it ( 'should throw adding custom extra headers if ETag exists but return value is not of type object', async () => {
+    setupMiddleware({
+      base     : 'http://cp.api/v1',
+      useETags : true,
+      matchingETagHeaders: () => {
+      },
+    })
+
+    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
+    urlETags[ '/users/fetch' ] = ETag
+
+    const { stub } = stubAxiosReturn({
+      data: {
+        user: { name: 'Alejandro' },
+        status: 200
+      },
+      headers: {
+        ETag,
+      },
+    })
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+      })
+    }
+
+    assert.throws(
+      () => {dispatch( action )},
+      Error,
+      'Received ETagHeaders as a function but the returned value was not of type object.'
+    )
+
+    delete urlETags[ '/users/fetch' ]
+  } )
+
+  it ( 'should dispatch user-defined Type on creation of ETag', async () => {
+    setupMiddleware({
+      base                     : 'http://cp.api/v1',
+      useETags                 : true,
+      dispatchETagCreationType : 'ON_ETAG_CREATION',
+    })
+
+    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
+
+    const { stub } = stubAxiosReturn({
+      data: {},
+      status: 200,
+      headers: {
+        ETag,
+      },
+    })
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+        ETagCallback: {
+          type: 'ETAG_EXISTS',
+        },
+      })
+    }
+
+    await dispatch( action )
+    await flushPromises()
+    assert.deepEqual(
+      store.dispatch.firstCall.args[ 0 ],
+      {
+        type: 'ON_ETAG_CREATION',
+        ETag,
+        key: '/users/fetch',
+      }
+    )
+
+    delete urlETags[ '/users/fetch' ]
+  } )
+
+  it ( 'should call dispatch with ETagCallback if Object on status 304 Not Modified', async () => {
+    setupMiddleware({
+      base     : 'http://cp.api/v1',
+      useETags : true,
+    })
+
+    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
+    urlETags[ '/users/fetch' ] = ETag
+
+    const { stub } = stubAxiosReturn({
+      response: {
+        data: {},
+        status: 304,
+        headers: {
+          ETag,
+        },
+      },
+      data: {},
+    })
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+        ETagCallback: {
+          type: 'ETAG_EXISTS',
+        },
+      })
+    }
+
+    await dispatch( action )
+    await flushPromises()
+    assert.deepEqual(
+      store.dispatch.firstCall.args[ 0 ],
+      {
+        type: 'ETAG_EXISTS',
+      }
+    )
+
+    delete urlETags[ '/users/fetch' ]
+  } )
+
+  it ( 'should call ETagCallback if Function on status 304 Not Modified', async () => {
+    setupMiddleware({
+      base     : 'http://cp.api/v1',
+      useETags : true,
+    })
+
+    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
+    urlETags[ '/users/fetch' ] = ETag
+
+    const { stub } = stubAxiosReturn({
+      response: {
+        data: {},
+        status: 304,
+        headers: {
+          ETag,
+        },
+      },
+      data: {},
+    })
+
+    const spy = sandbox.spy()
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+        ETagCallback: spy,
+      })
+    }
+
+    await dispatch( action )
+    await flushPromises()
+
+
+    assert.isTrue( spy.calledOnce )
+    assert.deepEqual(
+      spy.args[ 0 ][ 0 ],
+      {
+        dispatch : store.dispatch,
+        getState : store.getState,
+        state    : store.getState(),
+      },
+    )
+
     delete urlETags[ '/users/fetch' ]
   } )
 
@@ -516,7 +727,7 @@ describe( 'shapeshifter middleware', () => {
 
         const expectedAction = {
           type: 'API_ERROR',
-          message: 'FETCH_USER_FAILED failed.. lol',
+          message: 'FETCH_USER_FAILED failed.',
           error: 'Failed to do stuff.'
         }
 
@@ -883,7 +1094,7 @@ describe( 'shapeshifter middleware', () => {
 
         const expectedAction = {
           type    : 'API_ERROR',
-          message : 'FETCH_USER_FAILED failed.. lol',
+          message : 'FETCH_USER_FAILED failed.',
           error   : {
             data : {
               errors : [ 'Error authorizing or something' ],
