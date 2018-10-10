@@ -546,6 +546,9 @@ describe( 'shapeshifter middleware', () => {
     assert.deepEqual(
       spy.args[ 0 ][ 0 ],
       {
+        type     : action.types[ 0 ],
+        path     : '/users/fetch',
+        ETag     : ETag,
         dispatch : store.dispatch,
         getState : store.getState,
         state    : store.getState(),

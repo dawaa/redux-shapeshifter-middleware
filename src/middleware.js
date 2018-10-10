@@ -448,7 +448,13 @@ const middleware = (options) => {
           if ( cb.constructor === Object ) {
             return dispatch( cb )
           } else if ( cb.constructor === Function ) {
-            return cb( store === null ? meta : store )
+
+            return cb({
+              type : REQUEST,
+              path : uris,
+              ETag : urlETags[ uris ],
+              ...(store === null ? meta : store)
+            })
           }
 
           return
