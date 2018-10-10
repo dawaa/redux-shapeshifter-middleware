@@ -490,6 +490,15 @@ If a function is provided the fuction will receive following arguments:
 
 * Arguments
     * `obj <object>`
+        * `type <string>`
+          The neutral type is return, e.g. `FETCH_USER` and not any of the ones that has suffix `_SUCCESS` or `_FAILED`.
+
+        * `path <string>`
+          The path called, e.g. `/fetch/users`.
+
+        * `ETag <string>`
+          The ETag used resulting in a 304 response.
+
         * `dispatch <function>`
         * `state <object>`
         * `getState <function>`
