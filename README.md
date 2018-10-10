@@ -336,9 +336,11 @@ If you've built your own REST API and want to determine yourself what's right or
 _`default: null`_
 
 In case you are more "wordy" in your responses and your response object might look like:
-```json
+```jsonc
 {
-  user: { name: 'DAwaa' },
+  user: {
+    name: 'DAwaa'
+  },
   status: 'success'
 }
 ```
