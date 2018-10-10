@@ -16,6 +16,9 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
     * [handleStatusResponses](#handlestatusresponses-function)
     * [fallbackToAxiosStatusResponse](#fallbacktoaxiosstatusresponse-boolean)
     * [customSuccessResponses](#customsuccessresponses-array)
+    * [useETags](#useetags-boolean)
+    * [dispatchETagCreationType](#dispatchetagcreationtype-string)
+    * [matchingETagHeaders](#matchingetagheaders-function)
 * [Action properties](#action-properties)
     * [type](#type-string)
     * [types](#types-array)
@@ -27,6 +30,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
             * [failure](#failure-function)
             * [tapAfterCall](#tapaftercall-function)
             * [auth](#auth-boolean)
+            * [ETagCallback](#etagcallback-objectfunction)
     * [meta](#meta-object)
         * [mergeParams](#metamergeparams-boolean)
     * [axios](#axios-object)
@@ -251,6 +255,46 @@ _`default: false`_
 
 This will enable the middleware to store ETag(s) if they exist in the response with the URI segments as the key.
 
+#### `dispatchETagCreationType <string>`
+_`default: undefined`_
+
+Requires [`useETags`](#useetags-boolean) to be set to true.
+
+When the middleware handles a call it will check if the response has an ETag header set, if it does, we store it. Though as we store it we will also emit the given value set to `dispatchETagCreationType` so that it's possible to react when the middleware stores the call and its ETag value.
+
+Example of action dispatched upon storing of ETag:
+
+```
+{
+  type: valuePassedTo_dispatchETagCreationType,
+  ETag: 'randomETagValue',
+  key: '/fetch/users/'
+}
+```
+
+#### `matchingETagHeaders <function>`
+_`default: undefined`_
+
+* Arguments
+    * `obj <object>`
+        * `ETag <string>`
+        * `dispatch <function>`
+        * `state <object>`
+        * `getState <function>`
+
+Requires [`useETags`](#useetags-boolean) to be set to true.
+
+Takes a function which is called when any endpoint has an ETag stored (which is done by the middleware if the response holds an ETag property). The function receives normal store operations as well as the matching `ETag` identifier for you to append to the headers you wish to pass.
+
+If nothing passed to this property the following will be the default headers passed if the call already has stored an ETag:
+
+```
+{
+  'If-None-Match': 'some-etag-value',
+  'Cache-Control': 'private, must-revalidate'
+}
+```
+
 #### `handleStatusResponses <function>`
 _`default: null`_
 
@@ -418,6 +462,21 @@ Same as `tapBeforeCall <function>` but is called **after** the API request was m
 Default is **false**.
 
 If the API call is constructed with `auth: true` and the middleware set up was initialized with an `auth` key pointing to the part of the store you want to use for authorization in your API calls. Then what you set up in the initialization will be added to the requests parameters automatically for you.
+
+#### `ETagCallback <object|function>`
+Default is **undefined**.
+
+Requires [`useETags`](#useetags-boolean) to be set to true.
+
+When a call is made and the response has already been cached as the resource hasn't changed since last time. We will emit either an object if passed to `ETagCallback` or run a function if provided.
+
+If a function is provided the fuction will receive following arguments:
+
+* Arguments
+    * `obj <object>`
+        * `dispatch <function>`
+        * `state <object>`
+        * `getState <function>`
 ______________________________________________________
 
 
