@@ -20,6 +20,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
     * [useETags](#useetags-boolean)
     * [dispatchETagCreationType](#dispatchetagcreationtype-string)
     * [matchingETagHeaders](#matchingetagheaders-function)
+    * [emitRequestType](#emitrequesttype)
 * [Action properties](#action-properties)
     * [type](#type-string)
     * [types](#types-array)
@@ -358,6 +359,13 @@ Then you might want to consider adding 'success' to the array when initializing 
 _`default: false`_
 
 This ignores [`fallbackToAxiosStatusResponse`](#fallbacktoaxiosstatusresponse-boolean) and [`customSuccessResponses`](#customsuccessresponses-array), this means it only looks at the status code from the Axios response object.
+
+#### `emitRequestType <boolean>`
+_`default: false`_
+
+By default `redux-shapeshifter-middleware` doesn't emit the neutral action type. It returns either the `*_SUCCESS` or `*_FAILED` depending on what the result of the API call was.
+
+By setting `emitRequestType` to `true` the middleware will also emit `YOUR_ACTION` along with its respective types, `YOUR_ACTION_SUCCESS` and `YOUR_ACTION_FAILED` based on the situation.
 
 
 

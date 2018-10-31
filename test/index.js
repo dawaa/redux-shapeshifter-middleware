@@ -88,6 +88,7 @@ describe( 'shapeshifter middleware', () => {
       customSuccessResponses: null,
       useOnlyAxiosStatusResponse: false,
       useETags: false,
+      emitRequestType: false,
     } )
   } )
 
@@ -133,6 +134,7 @@ describe( 'shapeshifter middleware', () => {
               customSuccessResponses: null,
               useOnlyAxiosStatusResponse: false,
               useETags: false,
+              emitRequestType: false,
             }
           )
           done()
@@ -670,6 +672,30 @@ describe( 'shapeshifter middleware', () => {
     chai.expect(
       () => dispatch( action )
     ).to.throw( Error )
+  } )
+
+  it ( 'should emit request type if set to true', async () => {
+    setupMiddleware({
+      base            : 'http://cp.api/v1',
+      emitRequestType : true,
+    })
+    stubAxiosReturn({ data: { status: 200 } })
+
+    const payload = { data: { name: 'Alejandro', status: 200 } }
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch'
+      })
+    }
+
+    await dispatch( action )
+    await flushPromises()
+
+    assert.deepEqual(
+      store.dispatch.firstCall.args[ 0 ],
+      { type: 'FETCH_USER' }
+    )
   } )
 
   describe( 'axios calls', () => {

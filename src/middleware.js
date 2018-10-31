@@ -23,6 +23,7 @@ const defaultMiddlewareOpts = {
   customSuccessResponses: null,
   useOnlyAxiosStatusResponse: false,
   useETags: false,
+  emitRequestType: false,
 }
 
 export let middlewareOpts = {}
@@ -189,6 +190,10 @@ const middleware = (options) => {
 
     // Add call to callStack
     callStack.addToStack({ call: REQUEST, token: source.token, cancel: source.cancel })
+
+    if ( middlewareOpts.emitRequestType ) {
+      dispatch({ type: REQUEST })
+    }
 
     // Append current logged in user's session id to the call
     let authHeaders = false
