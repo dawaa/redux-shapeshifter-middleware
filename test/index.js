@@ -590,6 +590,12 @@ describe( 'shapeshifter middleware', () => {
     delete urlETags[ '/users/fetch' ]
   } )
 
+  it ( 'should ignore if action is undefined', () => {
+    const action = undefined
+    dispatch( action )
+    chai.assert.isTrue( next.called )
+  } )
+
   it ( 'should ignore action if not of type API', () => {
     const action = { type: 'MISS_ME', payload: {} }
     dispatch( action )

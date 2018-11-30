@@ -51,6 +51,11 @@ const middleware = (options) => {
       useOnlyAxiosStatusResponse,
     } = middlewareOpts;
 
+    // Bail if action is corrupt
+    if ( !action ) {
+      return next();
+    }
+
     // Bail if not an API action
     if ( action.type !== constants.API ) return next( action )
 
