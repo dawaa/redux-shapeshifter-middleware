@@ -2,14 +2,15 @@
 import axios, { CancelToken } from 'axios'
 
 // internal
-import recursiveObjFind                from './recursiveObjFind'
-import { isGeneratorFn }               from './generator'
-import { API, API_ERROR, API_VOID }    from './consts'
+import recursiveObjFind             from './recursiveObjFind'
+import { isGeneratorFn }            from './generator'
+import { API, API_ERROR, API_VOID } from './consts'
 import {
   removeFromStack,
   existsInStack
 } from './callStack'
 import * as callStack from './callStack'
+import handleResponse from './handleResponse'
 
 const defaultMiddlewareOpts = {
   base: '',
@@ -242,13 +243,6 @@ const middleware = (options) => {
       tapBeforeCall( { params: parameters, ...store } )
     }
 
-    // If nothing was passed in to `meta` key in our action it will be
-    // replaced with store actions, and so because of that we set `store`
-    // to be undefined
-    if ( meta.getState && typeof meta.getState === 'function' ) {
-      store = null
-    }
-
     if ( meta.mergeParams && meta.mergeParams === true ) {
       meta.params = Object.assign( {}, parameters )
     }
@@ -282,184 +276,65 @@ const middleware = (options) => {
     const url = baseURL + uris
 
     let _call
+    let requestConfig = {
+      url,
+      method,
+    }
 
     // Check if method can contain data and a config
     if ( [ 'post', 'put', 'patch' ].indexOf( method.toLowerCase() ) !== -1 ) {
-      _call = axios[ method ]( url, params, config )
-
-    } else if ( 'request' === method.toLowerCase() ) {
-      _call = axios[ method ]( config )
+      requestConfig = {
+        ...requestConfig,
+        data: params,
+        ...config,
+      }
 
     } else {
-      _call = axios[ method ]( url, Object.assign( params, config ) )
+      requestConfig = {
+        ...requestConfig,
+        ...params,
+        ...config,
+      }
     }
 
-    _call.then( async (response) => {
-      if ( typeof response.data !== 'object' ) {
-        if ( typeof response.data === 'string' ) {
-          return Promise.reject( response.data )
-        }
-        return Promise.reject( 'Something went wrong with the API call.' )
-      }
+    _call = axios.request( requestConfig )
 
-      const { data, headers = {} } = response
-      const { errors, error }      = data
+    _call
+      .then((response) => {
+        const { headers } = response
+        const normalizedHeaders = {}
 
-      const normalizedHeaders = {}
-
-      Object.keys( headers ).forEach( headerKey => {
-        const header = headers[ headerKey ]
-        normalizedHeaders[ headerKey.toLowerCase() ] = header
-      } )
-
-      if ( middlewareOpts.useETags && normalizedHeaders.etag ) {
-        urlETags[ uris ] = normalizedHeaders.etag
-
-        if ( middlewareOpts.dispatchETagCreationType ) {
-          dispatch({
-            type: middlewareOpts.dispatchETagCreationType,
-            ETag: normalizedHeaders.etag,
-            key: uris,
-          })
-        }
-      }
-
-      // Try catching the response status from the API call, otherwise
-      // fallback to Axios own status response.
-      const status = (
-        fallbackToAxiosStatusResponse && ! useOnlyAxiosStatusResponse
-          ? ( data.status || response.status )
-          : (
-            useOnlyAxiosStatusResponse
-              ? response.status
-              : data.status
-          )
-      )
-
-      if ( typeof middlewareOpts.handleStatusResponses === 'function' ) {
-        const statusHandled = await middlewareOpts.handleStatusResponses( response, store )
-          .then(
-            // Resolve
-            () => {
-              return true
-            },
-            // Reject
-            (err) => {
-              return Promise.reject( err )
-            }
-          )
-
-        if ( statusHandled.constructor === Promise ) {
-          return statusHandled
-        }
-      } else if ( status !== 200
-        && status !== 201
-        && status !== 204 ) {
-        // If we have a custom success response and we received one that fits
-        // our array
-        if ( middlewareOpts.customSuccessResponses != null
-          && middlewareOpts.customSuccessResponses.constructor === Array
-          && middlewareOpts.customSuccessResponses.indexOf( status ) !== -1 ) {
-          // .. code
-        } else {
-          return Promise.reject( response )
-        }
-      }
-
-      /**
-       * In case we don't have a custom status reponse handler we will
-       * by default look for the keys `error` or `errors` in the response
-       * object to see if we should deal with them.
-       */
-      if ( typeof middlewareOpts.handleStatusResponses !== 'function' ) {
-        if ( error !== undefined
-          && error !== null
-          && error.constructor === String
-          && errors instanceof Array === false ) {
-          return Promise.reject( error )
+        if ( headers == null ) {
+          return response
         }
 
-        if (
-          errors !== undefined
-          && errors !== null
-          && errors.constructor === Array
-          && errors.length > 0 ) {
-          return Promise.reject( errors )
-        }
-      }
-
-      /**
-       * Handle generator functions
-       */
-      if ( isGeneratorFn( success ) ) {
-        return new Promise(( resolve, reject ) => {
-          let gen = success( SUCCESS, response.data, meta, store )
-
-          const _resolve = data => {
-            try {
-              let it = gen.next( data )
-              _iterate( it )
-            } catch (e) {
-              reject( e )
-            }
-          }
-
-          const _reject = error => {
-            try {
-              _iterate( gen.throw( error ) )
-            } catch (e) {
-              reject( e )
-            }
-          }
-
-          const _iterate = it => {
-            let { done, value } = it || {}
-
-            if ( done === true ) {
-              // Remove call from callStack when finished
-              removeFromStack( REQUEST )
-
-              if ( value === undefined ) {
-                return resolve({ type: API_VOID, LAST_ACTION: REQUEST })
-              }
-
-              return resolve( value )
-            }
-
-            // If we are dealing with a generator function
-            if ( value.then && typeof value.then === 'function' ) {
-              Promise.resolve( value ).then( _resolve, _reject )
-
-              // If value is function
-            } else if ( typeof value === 'function' ) {
-              try {
-                _resolve( value() )
-              } catch (e) {
-                _reject( e )
-              }
-
-              // If all else fails
-            } else {
-              _resolve( value )
-            }
-          }
-
-          // Kick it Stevie Wonder!
-          _resolve()
-        })
-        .then( next, error => {
-          // Remove call from callStack when finished
-          removeFromStack( REQUEST )
-
-          console.error( `Generator ACTION had an error ==> ${ error }` )
+        Object.keys( headers ).forEach( headerKey => {
+          const header = headers[ headerKey ]
+          normalizedHeaders[ headerKey.toLowerCase() ] = header
         } )
-      }
 
-      // Remove call from callStack when finished
-      removeFromStack( REQUEST )
+        if ( middlewareOpts.useETags && normalizedHeaders.etag ) {
+          urlETags[ uris ] = normalizedHeaders.etag
 
-      dispatch( success( SUCCESS, response.data, meta, store ) )
+          if ( middlewareOpts.dispatchETagCreationType ) {
+            dispatch({
+              type: middlewareOpts.dispatchETagCreationType,
+              ETag: normalizedHeaders.etag,
+              key: uris,
+            })
+          }
+        }
+
+        return response
       })
+      .then(response =>
+        handleResponse( response )({ dispatch, state: getState(), getState })( next )({
+          success,
+          failure,
+          types: { REQUEST, SUCCESS, FAILURE },
+          meta,
+        })
+      )
       .catch( error => {
         // Remove call from callStack when finished
         removeFromStack( REQUEST )
@@ -484,7 +359,6 @@ const middleware = (options) => {
 
         dispatch( failure( FAILURE, error ) )
       })
-
 
     // Not sure of its usage atm, but it might be nice to have some where
     if ( typeof tapAfterCall === 'function' ) {
