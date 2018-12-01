@@ -2,9 +2,9 @@
 import axios, { CancelToken } from 'axios'
 
 // internal
-import recursiveObjFind                from './recursiveObjFind'
-import { isGeneratorFn }               from './generator'
-import { API, API_ERROR, API_VOID }    from './consts'
+import recursiveObjFind             from './recursiveObjFind'
+import { isGeneratorFn }            from './generator'
+import { API, API_ERROR, API_VOID } from './consts'
 import {
   removeFromStack,
   existsInStack
