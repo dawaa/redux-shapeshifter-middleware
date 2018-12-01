@@ -46,27 +46,23 @@ const setupMiddleware = (opts = defaultConfig) => {
   dispatch   = action => middleware( store )( next )( action )
 }
 
-const stubAxiosReturn = ({ method = 'get', ...fake }) => {
-  const p    = new Promise( r => r( fake ) )
-  const stub = sandbox.stub( axios, method ).returns( p )
-  return {
-    promise : p,
-    stub    : stub,
-  }
+
+const stubApiResponse = payload => {
+  return sandbox.stub( axios, 'request' ).resolves( payload )
 }
 
 describe( 'shapeshifter middleware', () => {
-  let stubCancelToken
   beforeEach(() => {
     setupMiddleware()
 
-    stubCancelToken = sandbox
+    sandbox
       .stub( CancelToken, 'source' )
       .returns({
         token  : sinon.spy(),
         cancel : sinon.spy(),
       })
   })
+
   afterEach(() => {
     sandbox.restore()
     decache( '../src/callStack' )
@@ -92,8 +88,8 @@ describe( 'shapeshifter middleware', () => {
     } )
   } )
 
-  it ( 'Should set headers within `auth` prop and successfully replace values with store values', (done) => {
-    stubAxiosReturn({})
+  it ( 'Should set headers within `auth` prop and successfully replace values with store values', async () => {
+    stubApiResponse({})
     setupMiddleware({
       base : 'http://cp.api/v1',
       auth : {
@@ -112,34 +108,31 @@ describe( 'shapeshifter middleware', () => {
       })
     }
 
-    dispatch( action )
-      .finally(() => {
-        setTimeout(() => {
-          assert.deepEqual(
-            middlewareOpts,
-            {
-              base : 'http://cp.api/v1',
-              constants: {
-                API       : 'API',
-                API_ERROR : 'API_ERROR',
-                API_VOID  : 'API_VOID',
-              },
-              auth : {
-                headers : {
-                  'Authorization' : 'Bearer verylongsupersecret123token456',
-                }
-              },
-              handleStatusResponses: null,
-              fallbackToAxiosStatusResponse: true,
-              customSuccessResponses: null,
-              useOnlyAxiosStatusResponse: false,
-              useETags: false,
-              emitRequestType: false,
-            }
-          )
-          done()
-        })
-      })
+    await dispatch( action )
+    await flushPromises()
+
+    assert.deepEqual(
+      middlewareOpts,
+      {
+        base : 'http://cp.api/v1',
+        constants: {
+          API       : 'API',
+          API_ERROR : 'API_ERROR',
+          API_VOID  : 'API_VOID',
+        },
+        auth : {
+          headers : {
+            'Authorization' : 'Bearer verylongsupersecret123token456',
+          }
+        },
+        handleStatusResponses: null,
+        fallbackToAxiosStatusResponse: true,
+        customSuccessResponses: null,
+        useOnlyAxiosStatusResponse: false,
+        useETags: false,
+        emitRequestType: false,
+      }
+    )
   } )
 
   it ( 'should ignore other rules if `useOnlyAxiosStatusResponse` is set to true', async () => {
@@ -149,7 +142,7 @@ describe( 'shapeshifter middleware', () => {
       customSuccessResponses: [ 'success' ],
       useOnlyAxiosStatusResponse: true,
     })
-    const { stub } = stubAxiosReturn({
+    const stub = stubApiResponse({
       data: {
         status: 'not-part-of-a-custom-success'
       },
@@ -166,6 +159,7 @@ describe( 'shapeshifter middleware', () => {
     }
 
     await dispatch( action )
+    await flushPromises()
 
     assert.strictEqual( spy.calledOnce, true )
   } )
@@ -179,7 +173,7 @@ describe( 'shapeshifter middleware', () => {
         }
       }
     })
-    const { stub } = stubAxiosReturn({
+    const stub = stubApiResponse({
       data: {
         status: 200
       }
@@ -198,6 +192,8 @@ describe( 'shapeshifter middleware', () => {
 
     const expectedAxiosParams = {
       config : {
+        url: 'http://cp.api/v1/users/fetch',
+        method: 'get',
         headers : {
           Authorization : 'Bearer verylongsupersecret123token456',
         },
@@ -210,16 +206,16 @@ describe( 'shapeshifter middleware', () => {
     await dispatch( action )
 
     chai.assert.deepEqual(
-      stub.args[ 0 ][ 1 ],
+      stub.args[ 0 ][ 0 ],
       expectedAxiosParams.config,
       'The passed in config to Axios should match and should\'ve passed in Authorization header.'
     )
   } )
 
-  it ( 'should correctly pass options to axios config parameter', () => {
+  it ( 'should correctly pass options to axios config parameter', async () => {
     // We are going to set the base ourselves through Axios config parameter
     setupMiddleware({ base: '' })
-    const { stub } = stubAxiosReturn({ data: { status: 200 } })
+    const stub = stubApiResponse({ data: { status: 200 } })
 
     const action = {
       ...createApiAction( 'FETCH_USER' ),
@@ -237,22 +233,20 @@ describe( 'shapeshifter middleware', () => {
         }
       }
     }
+    const expected = {
+      ...action.axios,
+      method: 'get',
+      url: 'http://test.base/users/fetch'
+    }
 
-    dispatch( action )
-      .finally(() => {
-        const [ url, config ] = stub.args[ 0 ]
-        chai.assert.strictEqual(
-          'http://test.base/users/fetch',
-          url,
-          'Should be possible to set baseURL through axios parameter'
-        )
-        chai.assert.deepEqual(
-          action.axios,
-          config,
-          'Should add Axios config to our config/params parameter in our Axios call'
-        )
-      })
+    await dispatch( action )
+    await flushPromises()
 
+    chai.assert.deepEqual(
+      expected,
+      stub.args[ 0 ][ 0 ],
+      'Should add Axios config to our config/params parameter in our Axios call'
+    )
   } )
 
   it ( 'should correctly merge headers if auth is also passed', async () => {
@@ -264,13 +258,11 @@ describe( 'shapeshifter middleware', () => {
         }
       }
     })
-    const { stub } = stubAxiosReturn({
+    const stub = stubApiResponse({
       data: {
         status: 200
       }
     })
-
-    const { token } = CancelToken.source()
 
     const action = {
       ...createApiAction( 'FETCH_USER' ),
@@ -286,22 +278,22 @@ describe( 'shapeshifter middleware', () => {
       },
     }
 
-    const expectedAxiosParams = {
-      config : {
-        headers : {
-          Authorization  : 'Bearer verylongsupersecret123token456',
-          'Content-Type' : 'application/json',
-        },
-        params  : {
-        },
-      }
+    const expected = {
+      method: 'get',
+      url: 'http://cp.api/v1/users/fetch',
+      headers : {
+        Authorization  : 'Bearer verylongsupersecret123token456',
+        'Content-Type' : 'application/json',
+      },
+      params  : {
+      },
     }
 
     await dispatch( action )
 
     chai.assert.deepEqual(
-      stub.args[ 0 ][ 1 ],
-      expectedAxiosParams.config,
+      stub.args[ 0 ][ 0 ],
+      expected,
       'The passed in config to Axios should match and should\'ve passed in Authorization header as well as custom headers.'
     )
   } )
@@ -311,7 +303,8 @@ describe( 'shapeshifter middleware', () => {
       base     : 'http://cp.api/v1',
       useETags : true,
     })
-    const { stub } = stubAxiosReturn({
+    const stub = stubApiResponse({
+      status: 200,
       data: {
         user: { name: 'Alejandro' },
         status: 200
@@ -329,6 +322,7 @@ describe( 'shapeshifter middleware', () => {
     }
 
     await dispatch( action )
+    await flushPromises()
 
     assert.isNotNull( urlETags[ '/users/fetch' ] )
     assert.strictEqual(
@@ -348,7 +342,7 @@ describe( 'shapeshifter middleware', () => {
     const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
     urlETags[ '/users/fetch' ] = ETag
 
-    const { stub } = stubAxiosReturn({
+    const stub = stubApiResponse({
       data: {
         user: { name: 'Alejandro' },
         status: 200
@@ -368,7 +362,7 @@ describe( 'shapeshifter middleware', () => {
     await dispatch( action )
 
     assert.deepEqual(
-      stub.args[ 0 ][ 1 ].headers,
+      stub.args[ 0 ][ 0 ].headers,
       {
         'If-None-Match': ETag,
         'Cache-Control': 'private, must-revalidate',
@@ -391,7 +385,7 @@ describe( 'shapeshifter middleware', () => {
     const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
     urlETags[ '/users/fetch' ] = ETag
 
-    const { stub } = stubAxiosReturn({
+    const stub = stubApiResponse({
       data: {
         user: { name: 'Alejandro' },
         status: 200
@@ -411,7 +405,7 @@ describe( 'shapeshifter middleware', () => {
     await dispatch( action )
 
     assert.deepEqual(
-      stub.args[ 0 ][ 1 ].headers,
+      stub.args[ 0 ][ 0 ].headers,
       {
         'a-custom-header' : 'awesome',
         'user-session-id' : 'abc123',
@@ -432,7 +426,7 @@ describe( 'shapeshifter middleware', () => {
     const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
     urlETags[ '/users/fetch' ] = ETag
 
-    const { stub } = stubAxiosReturn({
+    const stub = stubApiResponse({
       data: {
         user: { name: 'Alejandro' },
         status: 200
@@ -467,7 +461,7 @@ describe( 'shapeshifter middleware', () => {
 
     const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
 
-    const { stub } = stubAxiosReturn({
+    const stub = stubApiResponse({
       data: {},
       status: 200,
       headers: {
@@ -487,6 +481,7 @@ describe( 'shapeshifter middleware', () => {
 
     await dispatch( action )
     await flushPromises()
+
     assert.deepEqual(
       store.dispatch.firstCall.args[ 0 ],
       {
@@ -508,7 +503,7 @@ describe( 'shapeshifter middleware', () => {
     const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
     urlETags[ '/users/fetch' ] = ETag
 
-    const { stub } = stubAxiosReturn({
+    const stub = stubApiResponse({
       response: {
         data: {},
         status: 304,
@@ -531,6 +526,7 @@ describe( 'shapeshifter middleware', () => {
 
     await dispatch( action )
     await flushPromises()
+
     assert.deepEqual(
       store.dispatch.firstCall.args[ 0 ],
       {
@@ -550,7 +546,7 @@ describe( 'shapeshifter middleware', () => {
     const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
     urlETags[ '/users/fetch' ] = ETag
 
-    const { stub } = stubAxiosReturn({
+    const stub = stubApiResponse({
       response: {
         data: {},
         status: 304,
@@ -685,7 +681,7 @@ describe( 'shapeshifter middleware', () => {
       base            : 'http://cp.api/v1',
       emitRequestType : true,
     })
-    stubAxiosReturn({ data: { status: 200 } })
+    stubApiResponse({ data: { status: 200 } })
 
     const payload = { data: { name: 'Alejandro', status: 200 } }
     const action = {
@@ -706,10 +702,9 @@ describe( 'shapeshifter middleware', () => {
 
   describe( 'axios calls', () => {
 
-    it ( 'Should add call to callStack and remove on success', () => {
+    it ( 'Should add call to callStack and remove on success', async () => {
       const payload  = { data: { name: 'Alejandro', status: 200 } }
-      const resolved = new Promise(r => r( payload ))
-      sandbox.stub( axios, 'get' ).returns( resolved )
+      sandbox.stub( axios, 'request' ).resolves( payload )
       const addToStackSpy = sandbox.spy( callStack, 'addToStack' )
 
       const action = {
@@ -719,7 +714,8 @@ describe( 'shapeshifter middleware', () => {
         })
       }
 
-      dispatch( action )
+      await dispatch( action )
+      await flushPromises()
 
       chai.assert.isTrue(
         addToStackSpy.calledOnce,
@@ -747,7 +743,7 @@ describe( 'shapeshifter middleware', () => {
 
       const resolved2 = new Promise(r => r( payload ))
 
-      sandbox.stub( axios, 'get' )
+      sandbox.stub( axios, 'request' )
         .onFirstCall().returns( resolved )
         .onSecondCall().returns( resolved2 )
       const addToStackSpy = sandbox.spy( callStack, 'addToStack' )
@@ -780,8 +776,8 @@ describe( 'shapeshifter middleware', () => {
     } )
 
     describe( 'Failed API calls', () => {
-      it ( 'Let fallback failure() method capture it', () => {
-        stubAxiosReturn({ data: 'Failed to do stuff.' })
+      it ( 'Let fallback failure() method capture it', async () => {
+        stubApiResponse({ data: 'Failed to do stuff.' })
 
         const action = {
           ...createApiAction( 'FETCH_USER' ),
@@ -796,22 +792,19 @@ describe( 'shapeshifter middleware', () => {
           error: 'Failed to do stuff.'
         }
 
-        dispatch( action )
-          .finally(() => {})
-          .then(() => {
-            setTimeout(() => {
-              assert.isTrue( store.dispatch.called, 'Dispatch should\'ve been called' )
-              assert.deepEqual(
-                store.dispatch.firstCall.args[ 0 ],
-                expectedAction,
-                'Dispatch should have been called with expectedAction'
-              )
-            })
-          })
+        await dispatch( action )
+        await flushPromises()
+
+        assert.isTrue( store.dispatch.called, 'Dispatch should\'ve been called' )
+        assert.deepEqual(
+          store.dispatch.firstCall.args[ 0 ],
+          expectedAction,
+          'Dispatch should have been called with expectedAction'
+        )
       } )
 
-      it ( 'Custom failure() method', () => {
-        stubAxiosReturn({ data: 'Failed to do stuff, twice.' })
+      it ( 'Custom failure() method', async () => {
+        stubApiResponse({ data: 'Failed to do stuff, twice.' })
 
         const action = {
           type: 'API',
@@ -836,21 +829,18 @@ describe( 'shapeshifter middleware', () => {
           error: 'Failed to do stuff, twice.'
         }
 
-        dispatch( action )
-          .finally(() => {})
-          .then(() => {
-            setTimeout(() => {
-              assert.isTrue( store.dispatch.called )
-              assert.isTrue( store.dispatch.calledWith( expectedAction ) )
-            })
-          })
+        await dispatch( action )
+        await flushPromises()
+
+        assert.isTrue( store.dispatch.called )
+        assert.isTrue( store.dispatch.calledWith( expectedAction ) )
       } )
 
     } )
 
     describe( 'Successful API calls, returning errors', () => {
-      it ( 'Should reject with prop `error`', (done) => {
-        stubAxiosReturn({
+      it ( 'Should reject with prop `error`', async () => {
+        stubApiResponse({
           data: {
             error: 'An error occurred in the back-end, oh danglers!',
             status: 200
@@ -866,28 +856,24 @@ describe( 'shapeshifter middleware', () => {
           })
         }
 
-        dispatch( action )
-          .finally(() => {})
-          .then(() => {
-            setTimeout(() => {
-              assert.isTrue(
-                failureSpy.called,
-                'Call failure() when receiving prop `error` from back-end'
-              )
-              assert.deepEqual(
-                failureSpy.args[ 0 ],
-                [
-                  'FETCH_USER_FAILED',
-                  'An error occurred in the back-end, oh danglers!'
-                ]
-              )
-              done()
-            })
-          })
+        await dispatch( action )
+        await flushPromises()
+
+        assert.isTrue(
+          failureSpy.called,
+          'Call failure() when receiving prop `error` from back-end'
+        )
+        assert.deepEqual(
+          failureSpy.args[ 0 ],
+          [
+            'FETCH_USER_FAILED',
+            'An error occurred in the back-end, oh danglers!'
+          ]
+        )
       } )
 
-      it ( 'Should reject with prop `errors` (array)', async() => {
-        stubAxiosReturn({
+      it ( 'Should reject with prop `errors` (array)', async () => {
+        stubApiResponse({
           data: {
             errors: [ 'Reject this one baby', 'Another error' ],
             status: 200
@@ -905,20 +891,19 @@ describe( 'shapeshifter middleware', () => {
         }
 
         await dispatch( action )
+        await flushPromises()
 
-        setTimeout(() => {
-          assert.isTrue( failureSpy.called, 'Should call failure()' )
-          assert.deepEqual(
-            failureSpy.args[ 0 ],
-            [
-              'FETCH_USER_FAILED',
-              [ 'Reject this one baby', 'Another error' ],
-            ]
-          )
-        })
+        assert.isTrue( failureSpy.called, 'Should call failure()' )
+        assert.deepEqual(
+          failureSpy.args[ 0 ],
+          [
+            'FETCH_USER_FAILED',
+            [ 'Reject this one baby', 'Another error' ],
+          ]
+        )
       } )
 
-      it ( 'Should using custom status response handler reject', () => {
+      it ( 'Should using custom status response handler reject', async () => {
         const rejectSpy  = sandbox.spy()
         const resolveSpy = sandbox.spy()
         setupMiddleware({
@@ -934,7 +919,7 @@ describe( 'shapeshifter middleware', () => {
           }
         })
 
-        const { stub } = stubAxiosReturn({
+        const stub = stubApiResponse({
           data: {
             errors: [ 'Reject this one baby', 'Another error' ],
             status: 200
@@ -952,34 +937,33 @@ describe( 'shapeshifter middleware', () => {
           })
         }
 
-        dispatch( action )
-          .finally()
-          .then((res) => {
-            assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
-            assert.isTrue( rejectSpy.called, 'Should return Promise.reject.' )
-            assert.isFalse( resolveSpy.called, 'Should not return Promise.resolve.' )
-            // Because we have a nested Promise
-            setTimeout(() => {
-              assert.isTrue(
-                store.dispatch.called,
-                'Should have called dispatch()'
-              )
-              assert.isTrue(
-                failureSpy.calledOnce,
-                'failure() method of Action should have been called.'
-              )
-              assert.deepEqual(
-                failureSpy.firstCall.args,
-                [
-                  'FETCH_USER_FAILED',
-                  [ 'Reject this one baby', 'Another error' ]
-                ]
-              )
-            })
-          })
+        await dispatch( action )
+        await flushPromises()
+        assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
+        assert.isTrue( rejectSpy.called, 'Should return Promise.reject.' )
+        assert.isFalse( resolveSpy.called, 'Should not return Promise.resolve.' )
+
+        // Because we have a nested Promise
+        await flushPromises()
+
+        assert.isTrue(
+          store.dispatch.called,
+          'Should have called dispatch()'
+        )
+        assert.isTrue(
+          failureSpy.calledOnce,
+          'failure() method of Action should have been called.'
+        )
+        assert.deepEqual(
+          failureSpy.firstCall.args,
+          [
+            'FETCH_USER_FAILED',
+            [ 'Reject this one baby', 'Another error' ]
+          ]
+        )
       } )
 
-      it ( 'should using custom status response handler resolve', (done) => {
+      it ( 'should using custom status response handler resolve', async () => {
         const rejectSpy  = sandbox.spy()
         const resolveSpy = sandbox.spy()
         setupMiddleware({
@@ -995,7 +979,7 @@ describe( 'shapeshifter middleware', () => {
           }
         })
 
-        const { stub } = stubAxiosReturn({
+        const stub = stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
             status: 200
@@ -1013,49 +997,47 @@ describe( 'shapeshifter middleware', () => {
           })
         }
 
-        dispatch( action )
-          .finally()
-          .then((res) => {
-            assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
-            assert.isTrue( resolveSpy.called, 'Should return Promise.resolve.' )
-            assert.isFalse( rejectSpy.called, 'Should not return Promise.reject.' )
-            // Because we have a nested Promise
-            setTimeout(() => {
-              assert.isTrue(
-                store.dispatch.called,
-                'Should have called dispatch()'
-              )
-              assert.isTrue(
-                successSpy.calledOnce,
-                'success() method of Action should have been called.'
-              )
-              assert.deepEqual(
-                successSpy.firstCall.args,
-                [
-                  'FETCH_USER_SUCCESS',
-                  {
-                    user: { name: 'Alejandro' },
-                    status: 200,
-                  },
-                  {
-                    ...store,
-                    state: {
-                      user: {
-                        sessionid: 'abc123',
-                        token: 'verylongsupersecret123token456'
-                      }
-                    }
-                  },
-                  null
-                ]
-              )
-              done()
-            })
-          })
+        await dispatch( action )
+        await flushPromises()
+
+        assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
+        assert.isTrue( resolveSpy.called, 'Should return Promise.resolve.' )
+        assert.isFalse( rejectSpy.called, 'Should not return Promise.reject.' )
+        // Because we have a nested Promise
+        setTimeout(() => {
+          assert.isTrue(
+            store.dispatch.called,
+            'Should have called dispatch()'
+          )
+          assert.isTrue(
+            successSpy.calledOnce,
+            'success() method of Action should have been called.'
+          )
+          assert.deepEqual(
+            successSpy.firstCall.args,
+            [
+              'FETCH_USER_SUCCESS',
+              {
+                user: { name: 'Alejandro' },
+                status: 200,
+              },
+              {
+                ...store,
+                state: {
+                  user: {
+                    sessionid: 'abc123',
+                    token: 'verylongsupersecret123token456'
+                  }
+                }
+              },
+              null
+            ]
+          )
+        })
       } )
     } )
 
-    it ( 'should using custom status response handler resolve generator fn', (done) => {
+    it ( 'should using custom status response handler resolve generator fn', async () => {
       const rejectSpy  = sandbox.spy()
       const resolveSpy = sandbox.spy()
       setupMiddleware({
@@ -1071,7 +1053,7 @@ describe( 'shapeshifter middleware', () => {
         }
       })
 
-      const { stub } = stubAxiosReturn({
+      const stub = stubApiResponse({
         data: {
           user: { name: 'Alejandro' },
           status: 200
@@ -1105,36 +1087,33 @@ describe( 'shapeshifter middleware', () => {
         name: 'Alejandro'
       }
 
-      dispatch( action )
-        .finally()
-        .then((res) => {
-          assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
-          assert.isTrue( resolveSpy.called, 'Should return Promise.resolve.' )
-          assert.isFalse( rejectSpy.called, 'Should not return Promise.reject.' )
-          // Because we have a nested Promise
-          setTimeout(() => {
-            assert.isTrue(
-              store.dispatch.calledOnce,
-              'Should have called dispatch() twice'
-            )
-            assert.isTrue(
-              successSpy.calledOnce,
-              'success() generator method of Action should have been called.'
-            )
-            assert.deepEqual(
-              store.dispatch.firstCall.args[ 0 ],
-              expected,
-              'handleStatusResponse() should resolve success() generator fn'
-            )
-            done()
-          })
-        })
+      await dispatch( action )
+      await flushPromises()
 
+      assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
+      assert.isTrue( resolveSpy.called, 'Should return Promise.resolve.' )
+      assert.isFalse( rejectSpy.called, 'Should not return Promise.reject.' )
+
+      // Because we have a nested Promise
+      await flushPromises()
+      assert.isTrue(
+        store.dispatch.calledOnce,
+        'Should have called dispatch() twice'
+      )
+      assert.isTrue(
+        successSpy.calledOnce,
+        'success() generator method of Action should have been called.'
+      )
+      assert.deepEqual(
+        store.dispatch.firstCall.args[ 0 ],
+        expected,
+        'handleStatusResponse() should resolve success() generator fn'
+      )
     } )
 
     describe( 'Successful API calls', () => {
-      it ( 'Successful API call but wrong status code', (done) => {
-        stubAxiosReturn({
+      it ( 'Successful API call but wrong status code', async () => {
+        stubApiResponse({
           data: {
             errors: [ 'Error authorizing or something' ],
             status: 401
@@ -1168,25 +1147,21 @@ describe( 'shapeshifter middleware', () => {
           },
         }
 
-        dispatch( action )
-          .finally(() => {})
-          .then(() => {
-            setTimeout(() => {
-              chai.assert.isTrue(
-                store.dispatch.called,
-                'store.dispatch() should have been called.'
-              )
-              chai.assert.isTrue(
-                store.dispatch.calledWith( expectedAction ),
-                'store.dispatch() should have been called with expectedAction.'
-              )
-              done()
-            })
-          })
+        await dispatch( action )
+        await flushPromises()
+
+        chai.assert.isTrue(
+          store.dispatch.called,
+          'store.dispatch() should have been called.'
+        )
+        chai.assert.isTrue(
+          store.dispatch.calledWith( expectedAction ),
+          'store.dispatch() should have been called with expectedAction.'
+        )
       } )
 
       it ( 'Params should match using POST', async () => {
-        stubAxiosReturn({
+        const stub = stubApiResponse({
           method: 'post',
           data: {
             user: { name: 'Alejandro' },
@@ -1215,26 +1190,26 @@ describe( 'shapeshifter middleware', () => {
         }
 
         const expected = {
-          args: {
-            params: {
-              user_id     : 1,
-              username    : 'dawaa',
-              email       : 'dawaa@heaven.com',
-            },
-            cancelToken : token
-          }
+          method: 'post',
+          url: 'http://cp.api/v1/users/fetch',
+          data: {
+            user_id     : 1,
+            username    : 'dawaa',
+            email       : 'dawaa@heaven.com',
+          },
+          cancelToken : token
         }
 
         await dispatch( action )
 
         assert.deepEqual(
-          axios.post.args[ 0 ][ 1 ],
-          expected.args.params,
+          stub.args[ 0 ][ 0 ],
+          expected,
         )
       } )
 
       it ( 'should not append anything if just a GET request is made', async () => {
-        stubAxiosReturn({
+        const stub = stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
             status: 200
@@ -1256,13 +1231,13 @@ describe( 'shapeshifter middleware', () => {
         await dispatch( action )
 
         assert.deepEqual(
-          axios.get.args[ 0 ][ 1 ].params,
+          stub.args[ 0 ][ 0 ].params,
           {},
         )
       } )
 
-      it ( 'Params should match without auth property', () => {
-        stubAxiosReturn({
+      it ( 'Params should match without auth property', async () => {
+        const stub = stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
             status: 200
@@ -1287,24 +1262,23 @@ describe( 'shapeshifter middleware', () => {
         }
 
         const expected = {
-          args: {
-            params: {
-              username    : 'dawaa',
-              email       : 'dawaa@heaven.com',
-            },
-            cancelToken: token,
-          }
+          method: 'get',
+          url: 'http://cp.api/v1/users/fetch',
+          params: {
+            username    : 'dawaa',
+            email       : 'dawaa@heaven.com',
+          },
+          cancelToken: token,
         }
 
-        dispatch( action )
-          .finally(() => {})
-          .then(() => {
-            assert.deepEqual( axios.get.args[ 0 ][ 1 ], expected.args )
-          })
+        await dispatch( action )
+        await flushPromises()
+
+        assert.deepEqual( stub.args[ 0 ][ 0 ], expected )
       } )
 
-      it ( 'Params should match with auth property', () => {
-        stubAxiosReturn({
+      it ( 'Params should match with auth property', async () => {
+        const stub = stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
             status: 200
@@ -1331,25 +1305,24 @@ describe( 'shapeshifter middleware', () => {
         }
 
         const expected = {
-          args: {
-            params: {
-              username  : 'dawaa',
-              email     : 'dawaa@heaven.com',
-              sessionid : 'abc123',
-            },
-            cancelToken: token,
-          }
+          method: 'get',
+          url: 'http://cp.api/v1/users/fetch',
+          params: {
+            username  : 'dawaa',
+            email     : 'dawaa@heaven.com',
+            sessionid : 'abc123',
+          },
+          cancelToken: token,
         }
 
-        dispatch( action )
-          .finally()
-          .then(() => {
-            chai.assert.deepEqual( axios.get.args[ 0 ][ 1 ], expected.args )
-          })
+        await dispatch( action )
+        await flushPromises()
+
+        chai.assert.deepEqual( stub.args[ 0 ][ 0 ], expected )
       } )
 
-      it ( 'Success() method should be called with (type, payload, meta = store)', () => {
-        stubAxiosReturn({
+      it ( 'Success() method should be called with (type, payload, meta = store)', async () => {
+        const stub = stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
             status: 200
@@ -1390,15 +1363,15 @@ describe( 'shapeshifter middleware', () => {
           null
         ]
 
-        dispatch( action )
-          .finally(() => {
-            chai.assert.isTrue( spy.called, 'payload.success() was called' )
-            chai.assert.deepEqual( spy.args[ 0 ], expected )
-          })
+        await dispatch( action )
+        await flushPromises()
+
+        chai.assert.isTrue( spy.called, 'payload.success() was called' )
+        chai.assert.deepEqual( spy.args[ 0 ], expected )
       } )
 
-      it ( 'Success() method should be called with (type, payload, meta, store)', () => {
-        stubAxiosReturn({
+      it ( 'Success() method should be called with (type, payload, meta, store)', async () => {
+        stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
             status: 200
@@ -1448,15 +1421,15 @@ describe( 'shapeshifter middleware', () => {
           }
         ]
 
-        dispatch( action )
-          .finally(() => {
-            chai.assert.isTrue( spy.called )
-            chai.assert.deepEqual( spy.args[ 0 ], expected )
-          })
+        await dispatch( action )
+        await flushPromises()
+
+        chai.assert.isTrue( spy.called )
+        chai.assert.deepEqual( spy.args[ 0 ], expected )
       } )
 
-      it ( 'Should be fine with 204 status (empty response)', () => {
-        stubAxiosReturn({
+      it ( 'Should be fine with 204 status (empty response)', async () => {
+        stubApiResponse({
           data: {
             error: null,
             errors: null,
@@ -1481,14 +1454,14 @@ describe( 'shapeshifter middleware', () => {
           }),
         }
 
-        dispatch( action )
-          .finally(() => {
-            chai.assert.isTrue( spy.called )
-          })
+        await dispatch( action )
+        await flushPromises()
+
+        chai.assert.isTrue( spy.called )
       } )
 
-      it ( 'Merge params to meta parameter', () => {
-        stubAxiosReturn({
+      it ( 'Merge params to meta parameter', async () => {
+        stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
             status: 200
@@ -1547,16 +1520,16 @@ describe( 'shapeshifter middleware', () => {
           }
         ]
 
-        dispatch( action )
-          .finally(() => {
-            chai.assert.isTrue( spy.called )
-            chai.assert.deepEqual( spy.args[ 0 ], expected )
-          })
+        await dispatch( action )
+        await flushPromises()
+
+        chai.assert.isTrue( spy.called )
+        chai.assert.deepEqual( spy.args[ 0 ], expected )
       } )
 
 
-      it ( 'Dispatch basic user firstName', () => {
-        stubAxiosReturn({
+      it ( 'Dispatch basic user firstName', async () => {
+        const stub = stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
             status: 200
@@ -1587,6 +1560,8 @@ describe( 'shapeshifter middleware', () => {
             firstName: 'Alejandro'
           },
           args: {
+            method: 'get',
+            url: 'http://cp.api/v1/users/fetch',
             params: {
               sessionid   : 'abc123',
             },
@@ -1594,16 +1569,16 @@ describe( 'shapeshifter middleware', () => {
           }
         }
 
-        dispatch( action )
-          .finally(() => {
-            chai.assert.isTrue( store.dispatch.called )
-            chai.assert.isTrue( store.dispatch.calledWith( expected.action ) )
-            chai.assert.deepEqual( axios.get.args[ 0 ][ 1 ], expected.args )
-          })
+        await dispatch( action )
+        await flushPromises()
+
+        chai.assert.isTrue( store.dispatch.called )
+        chai.assert.isTrue( store.dispatch.calledWith( expected.action ) )
+        chai.assert.deepEqual( stub.args[ 0 ][ 0 ], expected.args )
       } )
 
-      it ( 'Should run tapBeforeCall()', () => {
-        stubAxiosReturn({
+      it ( 'Should run tapBeforeCall()', async () => {
+        stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
             status: 200
@@ -1645,21 +1620,21 @@ describe( 'shapeshifter middleware', () => {
           getState: store.getState
         }
 
-        dispatch( action )
-          .finally(() => {
-            chai.assert.isTrue( spy.called )
-            chai.assert.isTrue( spy.calledOnce )
-            chai.assert.deepEqual( spy.args[ 0 ][ 0 ], expectedParams )
-          })
+        await dispatch( action )
+        await flushPromises()
+
+        chai.assert.isTrue( spy.called )
+        chai.assert.isTrue( spy.calledOnce )
+        chai.assert.deepEqual( spy.args[ 0 ][ 0 ], expectedParams )
       } )
 
-      it ( 'Should succeed on a custom success response', (done) => {
+      it ( 'Should succeed on a custom success response', async () => {
         setupMiddleware({
           base: 'http://cp.api/v1',
           customSuccessResponses: [ 'success' ],
         })
 
-        stubAxiosReturn({
+        stubApiResponse({
           data: {
             status: 'success'
           },
@@ -1675,19 +1650,17 @@ describe( 'shapeshifter middleware', () => {
           })
         }
 
-        dispatch( action )
+        await dispatch( action )
+        await flushPromises()
 
-        setTimeout(() => {
-          assert.isTrue(
-            store.dispatch.calledOnce,
-            'store.dispatch() should have been called.'
-          )
-          assert.isTrue(
-            successSpy.calledOnce,
-            'success() method should have been called.'
-          )
-          done()
-        })
+        assert.isTrue(
+          store.dispatch.calledOnce,
+          'store.dispatch() should have been called.'
+        )
+        assert.isTrue(
+          successSpy.calledOnce,
+          'success() method should have been called.'
+        )
       } )
     } )
 
@@ -1702,15 +1675,13 @@ describe( 'shapeshifter middleware', () => {
         chai.assert.isTrue( isGeneratorFn( fn ) )
       } )
 
-      it ( 'Success generator function should yield API_VOID', done => {
-        const payload  = {
+      it ( 'Success generator function should yield API_VOID', async () => {
+        stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
             status: 200
           }
-        }
-        const resolved = new Promise(r => r( payload ))
-        sandbox.stub( axios, 'get' ).returns( resolved )
+        })
 
         const action = {
           type: 'API',
@@ -1733,24 +1704,20 @@ describe( 'shapeshifter middleware', () => {
           LAST_ACTION: 'FETCH_USER'
         }
 
-        dispatch( action )
+        await dispatch( action )
+        await flushPromises()
 
-        setTimeout(() => {
-          chai.assert.isTrue( store.dispatch.called )
-          chai.assert.deepEqual( store.dispatch.args[ 0 ][ 0 ], expected )
-          done()
-        })
+        chai.assert.isTrue( store.dispatch.called )
+        chai.assert.deepEqual( store.dispatch.args[ 0 ][ 0 ], expected )
       } )
 
-      it ( 'should yield SUCCESS with payload', done => {
-        const payload  = {
+      it ( 'should yield SUCCESS with payload', async () => {
+        stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
             status: 200,
           }
-        }
-        const resolved = new Promise(r => r( payload ))
-        sandbox.stub( axios, 'get' ).returns( resolved )
+        })
 
         const action = {
           type: 'API',
@@ -1779,28 +1746,24 @@ describe( 'shapeshifter middleware', () => {
           id: 1
         }
 
-        dispatch( action )
+        await dispatch( action )
+        await flushPromises()
 
-        setTimeout(() => {
-          chai.assert.isTrue( store.dispatch.called, 'store.dispatch() was called' )
-          chai.assert.deepEqual(
-            store.dispatch.args[ 0 ][ 0 ],
-            expected,
-            'Dispatch params match expected literal object'
-          )
-          done()
-        })
+        chai.assert.isTrue( store.dispatch.called, 'store.dispatch() was called' )
+        chai.assert.deepEqual(
+          store.dispatch.args[ 0 ][ 0 ],
+          expected,
+          'Dispatch params match expected literal object'
+        )
       } )
 
-      it ( 'Success generator function should dispatch multiple actions and return VOID', done => {
-        const payload  = {
+      it ( 'Success generator function should dispatch multiple actions and return VOID', async () => {
+        stubApiResponse({
           data: {
             user: { name: 'Alejandro', id: 1 },
             status: 200
           }
-        }
-        const resolved = new Promise(r => r( payload ))
-        sandbox.stub( axios, 'get' ).returns( resolved )
+        })
 
         const action = {
           type: 'API',
@@ -1825,38 +1788,35 @@ describe( 'shapeshifter middleware', () => {
           LAST_ACTION: 'FETCH_USER'
         }
 
-        dispatch( action )
+        await dispatch( action )
+        await flushPromises()
 
-        setTimeout(() => {
-          chai.assert.strictEqual( store.dispatch.callCount, 4 )
-          chai.assert.deepEqual(
-            store.dispatch.getCall( 0 ).args[ 0 ],
-            {
-              type: 'FETCH_AVATAR',
-              sessionid: 'abc123'
-            }
-          )
-          chai.assert.deepEqual(
-            store.dispatch.getCall( 1 ).args[ 0 ],
-            {
-              type: 'FETCH_MESSAGES',
-              id: 1
-            }
-          )
-          chai.assert.deepEqual(
-            store.dispatch.getCall( 2 ).args[ 0 ],
-            {
-              type: 'FETCH_TEACHERS'
-            }
-          )
-          chai.assert.deepEqual( store.dispatch.lastCall.args[ 0 ], expected )
-          done()
-        })
+        chai.assert.strictEqual( store.dispatch.callCount, 4 )
+        chai.assert.deepEqual(
+          store.dispatch.getCall( 0 ).args[ 0 ],
+          {
+            type: 'FETCH_AVATAR',
+            sessionid: 'abc123'
+          }
+        )
+        chai.assert.deepEqual(
+          store.dispatch.getCall( 1 ).args[ 0 ],
+          {
+            type: 'FETCH_MESSAGES',
+            id: 1
+          }
+        )
+        chai.assert.deepEqual(
+          store.dispatch.getCall( 2 ).args[ 0 ],
+          {
+            type: 'FETCH_TEACHERS'
+          }
+        )
+        chai.assert.deepEqual( store.dispatch.lastCall.args[ 0 ], expected )
       } )
 
-      it ( 'Success generator function should throw error and not call dispatch', done => {
-        const resolved = new Promise(r => r( { data: { status: 200 } } ))
-        sandbox.stub( axios, 'get' ).returns( resolved )
+      it ( 'Success generator function should throw error and not call dispatch', async () => {
+        stubApiResponse({ data: { status: 200 } })
         const mock = sandbox.mock( console )
 
         mock.expects( 'error' ).once();
@@ -1877,13 +1837,11 @@ describe( 'shapeshifter middleware', () => {
           })
         }
 
-        dispatch( action )
+        await dispatch( action )
+        await flushPromises()
 
-        setTimeout(() => {
-          chai.assert.isTrue( store.dispatch.notCalled )
-          chai.assert.isTrue( mock.verify() )
-          done()
-        })
+        chai.assert.isTrue( store.dispatch.notCalled )
+        chai.assert.isTrue( mock.verify() )
       } )
     } )
 
