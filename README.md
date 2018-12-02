@@ -28,6 +28,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
     * [payload](#payload-function)
         * [payload properties](#inside-payload-properties)
             * [url](#url-string)
+            * [params](#params-object)
             * [repeat](#repeat-function)
               * [Example returning boolean](#example-using-boolean)
               * [Example returning custom payload](#example-using-custom-payload)
@@ -461,6 +462,8 @@ const anActionFn = () => ({
 ```
 
 #### `url <string>`
+
+#### `params <object>`
 
 #### `tapBeforeCall <function>`
 * Arguments
