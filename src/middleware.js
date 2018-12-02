@@ -297,6 +297,9 @@ const middleware = (options) => {
       }
     }
 
+    const _store = { dispatch, state: getState(), getState }
+    const processResponse = handleResponse( _store )( next )
+
     _call = axios.request( requestConfig )
 
     _call
@@ -328,7 +331,7 @@ const middleware = (options) => {
         return response
       })
       .then(response =>
-        handleResponse( response )({ dispatch, state: getState(), getState })( next )({
+        processResponse( response )({
           success,
           failure,
           types: { REQUEST, SUCCESS, FAILURE },

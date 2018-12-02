@@ -1,6 +1,6 @@
 import { middlewareOpts } from './middleware'
 
-export default response => store => {
+export default store => response => {
   const {
     fallbackToAxiosStatusResponse,
     useOnlyAxiosStatusResponse,

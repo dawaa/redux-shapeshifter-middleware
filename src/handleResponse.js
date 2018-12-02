@@ -16,7 +16,12 @@ function validateResponse(response) {
   return null
 }
 
-export default response => store => next => async ({ success, failure, types, meta }) => {
+export default store => next => response => async ({
+  success,
+  failure,
+  types,
+  meta,
+}) => {
   const validatedResponse = validateResponse( response )
 
   if ( validatedResponse ) {
@@ -27,10 +32,10 @@ export default response => store => next => async ({ success, failure, types, me
   const { data, headers = {} } = response
   const { errors, error }      = data
 
-  const handledStatusResponse = await handleStatusResponses( response )( store )
+  const handledStatusResponse = await handleStatusResponses( store )( response )
 
   if ( isGeneratorFn( success ) ) {
-    return handleGeneratorFn( response )( store )( next )({ success, types, meta })
+    return handleGeneratorFn( store )( next )( response )({ success, types, meta })
   }
 
   // Remove call from callStack when finished
