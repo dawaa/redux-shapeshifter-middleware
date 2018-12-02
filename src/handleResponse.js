@@ -21,6 +21,7 @@ export default store => next => response => async ({
   failure,
   types,
   meta,
+  repeat,
 }) => {
   const validatedResponse = validateResponse( response )
 
@@ -41,14 +42,18 @@ export default store => next => response => async ({
   // Remove call from callStack when finished
   removeFromStack( REQUEST )
 
-  store.dispatch(
-    success(
-      SUCCESS,
-      response.data,
-      meta,
-      (meta.getState && typeof meta.getState === 'function' ? null : store),
+  if ( repeat && repeat.constructor === Function ) {
+    response._shapeShifterRepeat = true
+  } else {
+    store.dispatch(
+      success(
+        SUCCESS,
+        response.data,
+        meta,
+        (meta.getState && typeof meta.getState === 'function' ? null : store),
+      )
     )
-  )
+  }
 
   return response
 }

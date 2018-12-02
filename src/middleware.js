@@ -138,6 +138,8 @@ const middleware = (options) => {
           message: `${ type } failed.`,
           error
         }),
+        repeat,
+        interval = 5000,
         ETagCallback = () => {},
         tapBeforeCall = undefined,
         tapAfterCall = undefined
@@ -336,8 +338,64 @@ const middleware = (options) => {
           failure,
           types: { REQUEST, SUCCESS, FAILURE },
           meta,
+          repeat,
         })
       )
+      .then(response => {
+        if ( !response || !response._shapeShifterRepeat ) return response
+
+        return new Promise((parentResolve, parentReject) => {
+          const resolveRepeater = data => {
+            dispatch(
+              success(
+                SUCCESS,
+                data,
+                meta,
+                (meta.getState && typeof meta.getState === 'function' ? null : store),
+              )
+            )
+
+            parentResolve( data )
+            return data
+          }
+          const rejectRepeater = data => {
+            parentReject( data )
+            return data
+          }
+
+          const repeater = async () => {
+            const newRequest  = await axios.request( requestConfig )
+            const newResponse = await processResponse( newRequest )({
+              success,
+              failure,
+              types: { REQUEST, SUCCESS, FAILURE },
+              meta,
+              repeat,
+            })
+
+            delete newResponse._shapeShifterRepeat
+
+            const result = repeat(
+              newResponse,
+              resolveRepeater,
+              rejectRepeater,
+            )
+
+            if ( result === true ) {
+              return resolveRepeater( newResponse )
+            } else if ( result === false ) {
+              return rejectRepeater( newResponse )
+            } else if ( result != null && result.constructor !== Boolean ) {
+              return result
+            }
+            setTimeout(() => {
+              repeater()
+            }, interval)
+          }
+
+          return repeater()
+        })
+      })
       .catch( error => {
         // Remove call from callStack when finished
         removeFromStack( REQUEST )
