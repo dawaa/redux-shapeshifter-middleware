@@ -1,7 +1,7 @@
 import { middlewareOpts }  from './middleware'
 import { removeFromStack } from './callStack'
 
-export default response => store => next => ({ success, types, meta }) => {
+export default store => next => response => ({ success, types, meta }) => {
   const {
     constants: {
       API_VOID,

@@ -28,6 +28,11 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
     * [payload](#payload-function)
         * [payload properties](#inside-payload-properties)
             * [url](#url-string)
+            * [params](#params-object)
+            * [repeat](#repeat-function)
+              * [Example returning boolean](#example-using-boolean)
+              * [Example returning custom payload](#example-using-custom-payload)
+            * [interval](#interval-integer)
             * [tapBeforeCall](#tapbeforecall-function)
             * [success](#success-function)
             * [failure](#failure-function)
@@ -458,6 +463,8 @@ const anActionFn = () => ({
 
 #### `url <string>`
 
+#### `params <object>`
+
 #### `tapBeforeCall <function>`
 * Arguments
     * `obj <object>`
@@ -485,6 +492,102 @@ This method is run if the API call went through successfully with no errors.
     * `error <mixed>`
 
 This method is run if the API call responds with an error from the back-end.
+
+#### `repeat <function>`
+* Arguments
+    * [`response <object>`](https://github.com/axios/axios#response-schema) The Axios response object
+    * `resolve <function>`
+    * `reject <function>`
+
+Inside the `repeat`-function you will have the [Axios response object](https://github.com/axios/axios#response-schema) at hand to determine yourself when you want to pass either the `*_SUCCESS` or `*_FAILED` action.
+
+There are two primary ways to denote an action from this state, either returning a `boolean` or calling one of the two other function arguments passed to `repeat()`, namely `resolve` and `reject`.
+
+Returning a boolean from `repeat` will send the [Axios response object](https://github.com/axios/axios#response-schema) to either the `success` or `failure` method of your API action as the payload.
+
+However if you denote your action using either `resolve` or `reject`, whatever passed to either of these two will be the payload sent to `success` or `failure`.
+
+##### Example using boolean
+```js
+// Returning a boolean
+const success = () => { /* retracted code */}
+const failure = () => { /* retracted code */}
+
+export const fetchUser = () => ({
+  type: API,
+  types: [
+    FETCH_USER,
+    FETCH_USER_SUCCESS,
+    FETCH_USER_FAILED,
+  ],
+  payload: () => ({
+    url: '/users/user/fetch',
+    success,
+    failure,
+    interval: 100,
+    repeat: (response) => {
+      const { data } = response
+
+      if (data && data.user && data.user.isOnline) {
+        return true // This tells the middleware to call
+                    // on `success`-method defined above
+                    // with the Axios response object.
+                    //
+                    // Same thing would've happened if one
+                    // were to return `false`, however the
+                    // `failure`-method would be called instead.
+      }
+    }
+  })
+})
+```
+
+##### Example using custom payload
+
+```js
+// Returning custom payload
+const success = () => { /* retracted code */}
+const failure = () => { /* retracted code */}
+
+export const fetchUser = () => ({
+  type: API,
+  types: [
+    FETCH_USER,
+    FETCH_USER_SUCCESS,
+    FETCH_USER_FAILED,
+  ],
+  payload: () => ({
+    url: '/users/user/fetch',
+    success,
+    failure,
+    interval: 100,
+    repeat: (response, resolve, reject) => {
+      const { data } = response
+
+      if (data && data.user && data.user.isOnline) {
+        return resolve({ userIsOnline: true }) // Here we return and call
+                                               // `resolve`-method with a
+                                               // custom payload. This will
+                                               // like above example call the
+                                               // `success`-method with the given
+                                               // value passed to `resolve` as the
+                                               // payload for `success`.
+                                               //
+                                               // Vice versa if one were to call
+                                               // `reject`-method instead with a
+                                               // custom payload, the `failure`-
+                                               // method would be called and the
+                                               // passed value would be the payload.
+      }
+    }
+  })
+})
+```
+
+#### `interval <integer>`
+_`default: 5000`_
+
+This is used in combination with the [`repeat`](#repeat-function) function. How often we should be calling the given endpoint.
 
 #### `tapAfterCall <function>`
 * Arguments

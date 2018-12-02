@@ -1847,4 +1847,179 @@ describe( 'shapeshifter middleware', () => {
 
   } )
 
+  describe ( 'Repeat API calls', () => {
+    it ( 'should repeatedly call an endpoint and resolve on boolean (true)', async () => {
+      sandbox.stub( axios, 'request' )
+        .onCall( 0 ).resolves({ status: 200, data: { isOnline: false } })
+        .onCall( 1 ).resolves({ status: 200, data: { isOnline: false } })
+        .onCall( 2 ).resolves({ status: 200, data: { isOnline: true } })
+
+      const tickSpy = sinon.spy()
+      const successSpy = sinon.spy()
+
+      const action = {
+        ...createApiAction( 'FETCH_USER' ),
+        payload: () => ({
+          url: '/users/fetch',
+          success: successSpy,
+          repeat: (response, resolve, reject) => {
+            tickSpy()
+            if ( response.data.isOnline ) {
+              return true
+            }
+          },
+          interval: 10,
+        })
+      }
+
+      await dispatch( action )
+      await flushPromises()
+
+      await new Promise(r => setTimeout(r, 10))
+      await flushPromises()
+
+      chai.assert.strictEqual(
+        tickSpy.callCount,
+        2,
+        'Should tick twice before isOnline is true',
+      )
+      chai.assert.isTrue(
+        successSpy.called,
+        'Success should\'ve been called after two ticks',
+      )
+    } )
+
+    it ( 'should repeatedly call an endpoint and reject on boolean (false)', async () => {
+      sandbox.stub( axios, 'request' )
+        .onCall( 0 ).resolves({ status: 200, data: { isOnline: true } })
+        .onCall( 1 ).resolves({ status: 200, data: { isOnline: true } })
+        .onCall( 2 ).resolves({ status: 200, data: { isOnline: false } })
+
+      const tickSpy = sinon.spy()
+      const failureSpy = sinon.spy()
+
+      const action = {
+        ...createApiAction( 'FETCH_USER' ),
+        payload: () => ({
+          url: '/users/fetch',
+          failure: failureSpy,
+          repeat: (response, resolve, reject) => {
+            tickSpy()
+            if ( !response.data.isOnline ) {
+              return false
+            }
+          },
+          interval: 10,
+        })
+      }
+
+      await dispatch( action )
+      await flushPromises()
+
+      await new Promise(r => setTimeout(r, 10))
+      await flushPromises()
+
+      chai.assert.strictEqual(
+        tickSpy.callCount,
+        2,
+        'Should tick twice before isOnline is false',
+      )
+      chai.assert.isTrue(
+        failureSpy.called,
+        'Success should\'ve been called after two ticks',
+      )
+    } )
+
+    it ( 'should repeatedly call an endpoint and resolve with custom data', async () => {
+      sandbox.stub( axios, 'request' )
+        .onCall( 0 ).resolves({ status: 200, data: { isOnline: false } })
+        .onCall( 1 ).resolves({ status: 200, data: { isOnline: false } })
+        .onCall( 2 ).resolves({ status: 200, data: { isOnline: true } })
+
+      const tickSpy = sinon.spy()
+      const successSpy = sinon.spy()
+
+      const action = {
+        ...createApiAction( 'FETCH_USER' ),
+        payload: () => ({
+          url: '/users/fetch',
+          success: successSpy,
+          repeat: (response, resolve, reject) => {
+            tickSpy()
+            if ( response.data.isOnline ) {
+              return resolve({ connected: true })
+            }
+          },
+          interval: 50,
+        })
+      }
+
+      await dispatch( action )
+      await flushPromises()
+
+      await new Promise(r => setTimeout(r, 100))
+      await flushPromises()
+
+      chai.assert.strictEqual(
+        tickSpy.callCount,
+        2,
+        'Should tick twice before isOnline is true',
+      )
+      chai.assert.isTrue(
+        successSpy.calledWith(
+          'FETCH_USER_SUCCESS',
+          { connected: true },
+          {
+            state: store.getState(),
+            getState: store.getState,
+            dispatch: store.dispatch,
+          }
+        )
+      )
+    } )
+
+    it ( 'should repeatedly call an endpoint and reject with custom data', async () => {
+      sandbox.stub( axios, 'request' )
+        .onCall( 0 ).resolves({ status: 200, data: { isOnline: true } })
+        .onCall( 1 ).resolves({ status: 200, data: { isOnline: true } })
+        .onCall( 2 ).resolves({ status: 200, data: { isOnline: false } })
+
+      const tickSpy = sinon.spy()
+      const failureSpy = sinon.spy()
+
+      const action = {
+        ...createApiAction( 'FETCH_USER' ),
+        payload: () => ({
+          url: '/users/fetch',
+          failure: failureSpy,
+          repeat: (response, resolve, reject) => {
+            tickSpy()
+            if ( !response.data.isOnline ) {
+              return reject({ buhu: true })
+            }
+          },
+          interval: 10,
+        })
+      }
+
+      await dispatch( action )
+      await flushPromises()
+
+      await new Promise(r => setTimeout(r, 20))
+      await flushPromises()
+
+      chai.assert.strictEqual(
+        tickSpy.callCount,
+        2,
+        'Should tick twice before isOnline is true',
+      )
+      chai.assert.isTrue(
+        failureSpy.calledWith(
+          'FETCH_USER_FAILED',
+          { buhu: true },
+        )
+      )
+    } )
+  } )
+
 } )
