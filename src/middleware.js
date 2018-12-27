@@ -249,7 +249,15 @@ const middleware = (options) => {
       meta.params = Object.assign( {}, parameters )
     }
 
-    const params = method === 'post' ? parameters : { params: parameters }
+    // Deal with how to set the body of our request, handling 'delete'
+    // as a special case
+    const params = [ 'post', 'put', 'patch' ].includes( method )
+      ? parameters
+      : (
+        method === 'delete'
+          ? { data: parameters }
+          : { params: parameters }
+      )
 
     const config = Object.assign(
       {},
