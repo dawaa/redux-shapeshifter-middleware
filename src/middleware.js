@@ -276,13 +276,7 @@ const middleware = (options) => {
       )
     )
 
-    const baseURL = (
-      base.length > 0
-        ? base
-        : config.baseURL != null && config.baseURL.length > 0
-          ? config.baseURL
-          : ''
-    )
+    const baseURL = config.baseURL || base || ''
     const url = baseURL + uris
 
     let _call

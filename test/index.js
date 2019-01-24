@@ -586,6 +586,31 @@ describe( 'shapeshifter middleware', () => {
     delete urlETags[ '/users/fetch' ]
   } )
 
+  it ( 'should override base url in action if done through the axios config object', async () => {
+    const stub = stubApiResponse({})
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users'
+      }),
+      axios: {
+        baseURL: 'http://other.domain',
+      },
+    }
+
+    const expected = {
+      url: 'http://other.domain/users',
+      method: 'get',
+      params: {},
+      baseURL: 'http://other.domain',
+    };
+
+    await dispatch( action )
+    await flushPromises()
+
+    assert.deepEqual(stub.args[ 0 ][ 0 ], expected)
+  } )
+
   it ( 'should ignore if action is undefined', () => {
     const action = undefined
     dispatch( action )
