@@ -1887,6 +1887,17 @@ describe( 'shapeshifter middleware', () => {
         successSpy.called,
         'Success should\'ve been called after two ticks',
       )
+      chai.assert.isTrue(
+        successSpy.calledWith(
+          'FETCH_USER_SUCCESS',
+          { status: 200, data: { isOnline: true } },
+          {
+            state: store.getState(),
+            getState: store.getState,
+            dispatch: store.dispatch,
+          }
+        )
+      )
     } )
 
     it ( 'should repeatedly call an endpoint and reject on boolean (false)', async () => {
