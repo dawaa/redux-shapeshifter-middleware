@@ -28,7 +28,7 @@ const createApiAction = name => ({
   ]
 })
 
-let store, next, dispatch, middleware, sandbox = sinon.sandbox.create();
+let store, next, dispatch, middleware, sandbox = sinon.createSandbox();
 const defaultConfig = { base: 'http://cp.api/v1', auth: { user: 'sessionid' } }
 const setupMiddleware = (opts = defaultConfig) => {
   store = {
