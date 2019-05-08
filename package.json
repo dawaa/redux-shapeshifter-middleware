@@ -14,10 +14,11 @@
   },
   "license": "MIT",
   "scripts": {
-    "prepublish": "yarn run test && yarn run build:babel",
-    "test": "cross-env BABEL_ENV=commonjs nyc mocha --require babel-polyfill --require babel-core/register --reporter spec test/*.js",
-    "test:debug": "mocha --inspect --require babel-polyfill --require babel-core/register test/*.js",
-    "test:watch": "yarn run test --watch",
+    "prepublish": "yarn run test:all && yarn run build:babel",
+    "test": "cross-env NODE_ENV=test nyc mocha",
+    "test:all": "cross-env NODE_ENV=test nyc mocha test/*.js",
+    "test:debug": "mocha --inspect test/*.js",
+    "test:watch": "yarn run test:all --watch",
     "build:babel": "rimraf ./lib && babel src --out-dir lib --copy-files"
   },
   "keywords": [
@@ -38,28 +39,36 @@
     "http"
   ],
   "dependencies": {
-    "axios": "^0.17.0",
-    "babel-runtime": "^6.26.0"
+    "@babel/runtime": "^7.4.4",
+    "axios": "^0.17.0"
   },
   "peerDependencies": {
     "axios": ">= 0.17"
   },
   "devDependencies": {
+    "@babel/cli": "^7.4.4",
+    "@babel/core": "^7.4.4",
+    "@babel/plugin-proposal-object-rest-spread": "^7.4.4",
+    "@babel/plugin-transform-destructuring": "^7.4.4",
+    "@babel/plugin-transform-regenerator": "^7.4.4",
+    "@babel/plugin-transform-runtime": "^7.4.4",
+    "@babel/preset-env": "^7.4.4",
+    "@babel/register": "^7.4.4",
     "axios": "^0.17.0",
-    "babel-cli": "^6.26.0",
-    "babel-plugin-transform-es2015-destructuring": "^6.23.0",
-    "babel-plugin-transform-object-rest-spread": "^6.26.0",
-    "babel-plugin-transform-runtime": "^6.23.0",
-    "babel-preset-env": "^1.6.1",
-    "chai": "^4.1.2",
-    "cross-env": "^5.1.0",
-    "decache": "^4.4.0",
+    "babel-plugin-istanbul": "^5.1.4",
+    "chai": "^4.2.0",
+    "cross-env": "^5.2.0",
+    "decache": "^4.5.1",
     "i": "^0.3.6",
-    "mocha": "^4.0.1",
+    "mocha": "^6.1.4",
     "npm": "^5.5.1",
-    "nyc": "^11.3.0",
+    "nyc": "^14.1.0",
     "rimraf": "^2.6.2",
-    "sinon": "^4.0.2",
-    "sinon-chai": "^3.0.0"
+    "sinon": "^7.3.2",
+    "sinon-chai": "^3.3.0"
+  },
+  "nyc": {
+    "sourceMap": false,
+    "instrument": false
   }
 }

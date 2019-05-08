@@ -1,9 +1,16 @@
 {
     "plugins": [
-        "transform-es2015-destructuring",
-        "transform-object-rest-spread",
-        "transform-regenerator",
-        "transform-runtime"
+        "@babel/plugin-transform-destructuring",
+        "@babel/plugin-proposal-object-rest-spread",
+        "@babel/plugin-transform-regenerator",
+        "@babel/plugin-transform-runtime"
     ],
-    "presets": [ "env" ]
+    "presets": [
+        "@babel/preset-env"
+    ],
+    "env": {
+        "test": {
+            "plugins": [ "istanbul" ]
+        }
+    }
 }
