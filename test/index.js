@@ -809,6 +809,27 @@ describe( 'shapeshifter middleware', () => {
       )
     } )
 
+    it ( 'should return same promise chain', () => {
+      let thenSpy, promiseStub
+      sandbox.stub( axios, 'request' ).callsFake(() => {
+        promiseStub = Promise.resolve({ data: { status: 200 } })
+        thenSpy = sandbox.spy(promiseStub, 'then')
+        return promiseStub
+      })
+
+      const action = {
+        ...createApiAction( 'FETCH_USER' ),
+        payload: () => ({
+          url: '/users/fetch'
+        })
+      }
+
+      const p = dispatch( action )
+      p.then(function randomFn() {})
+
+      chai.assert.strictEqual(thenSpy.callCount, 1);
+    } )
+
     describe( 'Failed API calls', () => {
       it ( 'Let fallback failure() method capture it', async () => {
         stubApiResponse({ data: 'Failed to do stuff.' })

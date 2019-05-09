@@ -306,7 +306,7 @@ const middleware = (options) => {
 
     _call = axios.request( requestConfig )
 
-    _call
+    const call = _call
       .then((response) => {
         const { headers } = response
         const normalizedHeaders = {}
@@ -428,7 +428,7 @@ const middleware = (options) => {
       tapAfterCall( { params: parameters, ...store } )
     }
 
-    return _call
+    return call
   }
 }
 
