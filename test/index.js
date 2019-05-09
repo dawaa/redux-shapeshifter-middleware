@@ -5,6 +5,7 @@ import axios, { CancelToken } from 'axios'
 import sinonChai              from 'sinon-chai'
 import decache                from 'decache'
 chai.use( sinonChai )
+sinon.assert.expose(chai.assert, { prefix: '' })
 
 // internal
 import flushPromises     from '../src/flushPromises'
@@ -52,14 +53,24 @@ const stubApiResponse = payload => {
 }
 
 describe( 'shapeshifter middleware', () => {
+  var mockToken;
+  var mockCancel;
+
+  function mockCancelToken() {}
+  mockCancelToken.prototype.throwIfRequested = sandbox.spy()
+  mockToken = new mockCancelToken()
+  mockCancel = sandbox.spy()
+
   beforeEach(() => {
     setupMiddleware()
 
     sandbox
       .stub( CancelToken, 'source' )
-      .returns({
-        token  : sinon.spy(),
-        cancel : sinon.spy(),
+      .callsFake(() => {
+        return {
+          token  : mockToken,
+          cancel : mockCancel,
+        }
       })
   })
 
@@ -681,13 +692,11 @@ describe( 'shapeshifter middleware', () => {
     dispatch( action )
 
     chai.assert.isTrue( payloadSpy.called )
-    chai.assert.isTrue(
-      payloadSpy.calledWith({
-        dispatch: store.dispatch,
-        state:    store.getState(),
-        cancel:   cancel,
-      })
-    )
+    chai.assert.calledWith(payloadSpy, {
+      dispatch: store.dispatch,
+      state:    store.getState(),
+      cancel:   mockCancel,
+    })
   } )
 
   it ( 'should throw an error if payload property doesn\'t return an object', () => {
@@ -1560,7 +1569,6 @@ describe( 'shapeshifter middleware', () => {
             status: 200
           }
         })
-        const { token } = CancelToken.source()
 
         const action = {
           type: 'API',
@@ -1590,7 +1598,7 @@ describe( 'shapeshifter middleware', () => {
             params: {
               sessionid   : 'abc123',
             },
-            cancelToken : token,
+            cancelToken : mockToken,
           }
         }
 
