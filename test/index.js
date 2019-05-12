@@ -191,8 +191,6 @@ describe( 'shapeshifter middleware', () => {
       }
     })
 
-    const { token } = CancelToken.source()
-
     const action = {
       ...createApiAction( 'FETCH_USER' ),
       payload: () => ({
@@ -211,7 +209,7 @@ describe( 'shapeshifter middleware', () => {
         },
         params  : {
         },
-        cancelToken : token,
+        cancelToken : mockToken,
       }
     }
 
@@ -797,12 +795,11 @@ describe( 'shapeshifter middleware', () => {
       dispatch( action )
 
       const firstCall = addToStackSpy.firstCall
-      const { cancel } = CancelToken.source()
 
       dispatch( actionTwo )
 
       chai.assert.isTrue(
-        cancel.called,
+        mockCancel.called,
         'First dispatched Action should have been cancelled.'
       )
     } )
@@ -1207,8 +1204,6 @@ describe( 'shapeshifter middleware', () => {
           }
         })
 
-        const { token } = CancelToken.source()
-
         const action = {
           type: 'API',
           types: [
@@ -1235,7 +1230,7 @@ describe( 'shapeshifter middleware', () => {
             username    : 'dawaa',
             email       : 'dawaa@heaven.com',
           },
-          cancelToken : token
+          cancelToken : mockToken
         }
 
         await dispatch( action )
@@ -1281,7 +1276,6 @@ describe( 'shapeshifter middleware', () => {
             status: 200
           }
         })
-        const { token } = CancelToken.source()
 
         const action = {
           type: 'API',
@@ -1306,7 +1300,7 @@ describe( 'shapeshifter middleware', () => {
             username    : 'dawaa',
             email       : 'dawaa@heaven.com',
           },
-          cancelToken: token,
+          cancelToken: mockToken,
         }
 
         await dispatch( action )
@@ -1322,8 +1316,6 @@ describe( 'shapeshifter middleware', () => {
             status: 200
           }
         })
-
-        const { token } = CancelToken.source()
 
         const action = {
           type: 'API',
@@ -1350,7 +1342,7 @@ describe( 'shapeshifter middleware', () => {
             email     : 'dawaa@heaven.com',
             sessionid : 'abc123',
           },
-          cancelToken: token,
+          cancelToken: mockToken,
         }
 
         await dispatch( action )
