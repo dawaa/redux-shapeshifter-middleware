@@ -306,7 +306,7 @@ const middleware = (options) => {
 
     _call = axios.request( requestConfig )
 
-    _call
+    const call = _call
       .then((response) => {
         const { headers } = response
         const normalizedHeaders = {}
@@ -421,6 +421,7 @@ const middleware = (options) => {
         }
 
         dispatch( failure( FAILURE, error ) )
+        throw new Error( error )
       })
 
     // Not sure of its usage atm, but it might be nice to have some where
@@ -428,7 +429,7 @@ const middleware = (options) => {
       tapAfterCall( { params: parameters, ...store } )
     }
 
-    return _call
+    return call
   }
 }
 
