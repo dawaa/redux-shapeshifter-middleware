@@ -3,8 +3,10 @@ import chai                   from 'chai'
 import sinon                  from 'sinon'
 import axios, { CancelToken } from 'axios'
 import sinonChai              from 'sinon-chai'
+import chaiAsPromised         from 'chai-as-promised'
 import decache                from 'decache'
 chai.use( sinonChai )
+chai.use( chaiAsPromised )
 sinon.assert.expose(chai.assert, { prefix: '' })
 
 // internal
@@ -119,8 +121,7 @@ describe( 'shapeshifter middleware', () => {
       })
     }
 
-    await dispatch( action )
-    await flushPromises()
+    await assert.isRejected(dispatch( action ), 'Something went wrong with the API call')
 
     assert.deepEqual(
       middlewareOpts,
@@ -616,8 +617,7 @@ describe( 'shapeshifter middleware', () => {
       baseURL: 'http://other.domain',
     };
 
-    await dispatch( action )
-    await flushPromises()
+    await assert.isRejected(dispatch( action ), 'Something went wrong with the API call')
 
     assert.deepEqual(stub.args[ 0 ][ 0 ], expected)
   } )
@@ -669,7 +669,7 @@ describe( 'shapeshifter middleware', () => {
     chai.assert.isTrue( mock.verify() )
   } )
 
-  it ( 'should call action.payload() method with dispatch and state', () => {
+  it ( 'should call action.payload() method with dispatch and state', async () => {
     const payloadSpy = sinon.spy()
     const action = {
       type: 'API',
@@ -687,9 +687,7 @@ describe( 'shapeshifter middleware', () => {
       }
     }
 
-    const { cancel } = CancelToken.source()
-
-    dispatch( action )
+    await assert.isRejected(dispatch( action ), Error)
 
     chai.assert.isTrue( payloadSpy.called )
     chai.assert.calledWith(payloadSpy, {
@@ -847,14 +845,12 @@ describe( 'shapeshifter middleware', () => {
           error: 'Failed to do stuff.'
         }
 
-        await dispatch( action )
-        await flushPromises()
-
-        assert.isTrue( store.dispatch.called, 'Dispatch should\'ve been called' )
+        await assert.isRejected(dispatch( action ), Error)
+        assert.called(store.dispatch)
         assert.deepEqual(
           store.dispatch.firstCall.args[ 0 ],
           expectedAction,
-          'Dispatch should have been called with expectedAction'
+          'Dispatch should have been called with expectedAction',
         )
       } )
 
@@ -884,13 +880,10 @@ describe( 'shapeshifter middleware', () => {
           error: 'Failed to do stuff, twice.'
         }
 
-        await dispatch( action )
-        await flushPromises()
-
+        await assert.isRejected(dispatch( action ), Error)
         assert.isTrue( store.dispatch.called )
         assert.isTrue( store.dispatch.calledWith( expectedAction ) )
       } )
-
     } )
 
     describe( 'Successful API calls, returning errors', () => {
@@ -911,9 +904,7 @@ describe( 'shapeshifter middleware', () => {
           })
         }
 
-        await dispatch( action )
-        await flushPromises()
-
+        await assert.isRejected(dispatch( action ), Error)
         assert.isTrue(
           failureSpy.called,
           'Call failure() when receiving prop `error` from back-end'
@@ -945,9 +936,7 @@ describe( 'shapeshifter middleware', () => {
           })
         }
 
-        await dispatch( action )
-        await flushPromises()
-
+        await assert.isRejected(dispatch( action ), Error)
         assert.isTrue( failureSpy.called, 'Should call failure()' )
         assert.deepEqual(
           failureSpy.args[ 0 ],
@@ -992,14 +981,10 @@ describe( 'shapeshifter middleware', () => {
           })
         }
 
-        await dispatch( action )
-        await flushPromises()
+        await assert.isRejected(dispatch( action ), Error)
         assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
         assert.isTrue( rejectSpy.called, 'Should return Promise.reject.' )
         assert.isFalse( resolveSpy.called, 'Should not return Promise.resolve.' )
-
-        // Because we have a nested Promise
-        await flushPromises()
 
         assert.isTrue(
           store.dispatch.called,
@@ -1202,9 +1187,7 @@ describe( 'shapeshifter middleware', () => {
           },
         }
 
-        await dispatch( action )
-        await flushPromises()
-
+        await assert.isRejected(dispatch( action ), Error)
         chai.assert.isTrue(
           store.dispatch.called,
           'store.dispatch() should have been called.'
@@ -1978,12 +1961,7 @@ describe( 'shapeshifter middleware', () => {
         })
       }
 
-      await dispatch( action )
-      await flushPromises()
-
-      await new Promise(r => setTimeout(r, 10))
-      await flushPromises()
-
+      await assert.isRejected(dispatch( action ), Error)
       chai.assert.strictEqual(
         tickSpy.callCount,
         2,
@@ -2067,12 +2045,7 @@ describe( 'shapeshifter middleware', () => {
         })
       }
 
-      await dispatch( action )
-      await flushPromises()
-
-      await new Promise(r => setTimeout(r, 20))
-      await flushPromises()
-
+      await assert.isRejected(dispatch( action ), Error)
       chai.assert.strictEqual(
         tickSpy.callCount,
         2,

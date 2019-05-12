@@ -421,6 +421,7 @@ const middleware = (options) => {
         }
 
         dispatch( failure( FAILURE, error ) )
+        throw new Error( error )
       })
 
     // Not sure of its usage atm, but it might be nice to have some where
