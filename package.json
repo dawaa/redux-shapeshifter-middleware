@@ -40,7 +40,8 @@
   ],
   "dependencies": {
     "@babel/runtime": "^7.4.4",
-    "axios": "^0.17.0"
+    "axios": "^0.17.0",
+    "folktale": "^2.3.2"
   },
   "peerDependencies": {
     "axios": ">= 0.17"
