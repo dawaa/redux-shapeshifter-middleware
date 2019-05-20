@@ -31,11 +31,7 @@ export let middlewareOpts = {}
 export const urlETags = {}
 
 const middleware = (options) => {
-  middlewareOpts = {
-    ...defaultMiddlewareOpts,
-    ...options
-  }
-
+  middlewareOpts = { ...defaultMiddlewareOpts, ...options }
   // Clear trailing slash
   middlewareOpts.base = middlewareOpts.base.replace( /\/$/, '' )
 
