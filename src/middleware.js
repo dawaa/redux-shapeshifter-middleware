@@ -11,6 +11,7 @@ import {
 } from './callStack'
 import * as callStack from './callStack'
 import handleResponse from './handleResponse'
+import validateAction from './utils/validateAction'
 
 const defaultMiddlewareOpts = {
   base: '',
@@ -48,45 +49,17 @@ const middleware = (options) => {
       useOnlyAxiosStatusResponse,
     } = middlewareOpts;
 
-    // Bail if action is corrupt
-    if ( !action ) {
-      return next();
-    }
+    const isValidAction = validateAction( constants.API )( next )( action )
 
-    // Bail if not an API action
-    if ( action.type !== constants.API ) return next( action )
-
-    // Bail if action is missing `payload` property
-    // Bail if `payload` property is not a function
-    if ( ! action.payload || typeof action.payload !== 'function' ) {
-
-      if ( action.types && action.types.constructor === Array ) {
-        const [ REQUEST, SUCCESS, FAILURE ] = action.types
-
-        if ( ! action.payload ) {
-          console.error(`redux-shapeshifter-middleware:
-  => ${ REQUEST } === action was called but was missing property 'payload'.`)
-          return next( action )
-        }
-
-        if ( typeof action.payload !== 'function' ) {
-          console.error(`redux-shapeshifter-middleware:
-  => ${ REQUEST } === action was called but property 'payload' was not of type function.`)
-          return next( action )
-        }
-      }
-
-      if ( ! action.payload ) {
-        console.error(`redux-shapeshifter-middleware:
-  => An API action was called but was missing property 'payload'.`)
-        return next( action )
-      }
-
-      if ( typeof action.payload !== 'function' ) {
-          console.error(`redux-shapeshifter-middleware:
-  => An API action was called but property 'payload' was not of type function.`)
-        return next( action )
-      }
+    if ( isValidAction && isValidAction.constructor === String ) {
+      action && console.error(
+        `redux-shapeshifter-middleware: ${ isValidAction } ` +
+        `=> ${JSON.stringify( action )}`
+      )
+      return next()
+    } else if ( ! isValidAction ) {
+      console.log('nihao');
+      return next()
     }
 
     // Prepare to cancel a request
@@ -102,15 +75,6 @@ const middleware = (options) => {
     if ( typeof payload !== 'object' ) {
       throw new Error(
         `Received payload as a function but the returned value was not of type object.`
-      )
-    }
-
-    if ( payload.types ) {
-      console.warn(
-        `DEPRECATED: payload.types is deprecated. Instead, move the property ` +
-        `one level up, outside of the payload function that returns an object.` +
-        `
-            The payload.types will stop working in a near future.`
       )
     }
 
@@ -177,14 +141,7 @@ const middleware = (options) => {
       }
     }
 
-    let REQUEST, SUCCESS, FAILURE;
-    if ( action.payload.types && action.payload.types.constructor === Array ) {
-      [ REQUEST, SUCCESS, FAILURE ] = action.payload.types
-    }
-
-    if ( action.types && action.types.constructor === Array ) {
-      [ REQUEST, SUCCESS, FAILURE ] = action.types
-    }
+    const [ REQUEST, SUCCESS, FAILURE ] = action.types
 
     // Only have one active request per Redux action
     const pendingCall = existsInStack( REQUEST )
