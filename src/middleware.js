@@ -72,7 +72,7 @@ const middleware = (options) => {
     })
 
     // Bail if the returned value of payload is not an object
-    if ( typeof payload !== 'object' ) {
+    if ( payload && payload.constructor !== Object ) {
       throw new Error(
         `Received payload as a function but the returned value was not of type object.`
       )
