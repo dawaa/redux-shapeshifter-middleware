@@ -646,7 +646,6 @@ describe( 'shapeshifter middleware', () => {
 
     dispatch( action )
     chai.assert.isTrue( next.called )
-    chai.assert.isTrue( next.calledWith( action ) )
     chai.assert.isTrue( mock.verify() )
   } )
 
@@ -663,7 +662,6 @@ describe( 'shapeshifter middleware', () => {
 
     dispatch( action )
     chai.assert.isTrue( next.called )
-    chai.assert.isTrue( next.calledWith( action ) )
     chai.assert.isTrue( mock.verify() )
   } )
 
@@ -698,6 +696,7 @@ describe( 'shapeshifter middleware', () => {
   it ( 'should throw an error if payload property doesn\'t return an object', () => {
     const action = {
       type: 'API',
+      types: ['A', 'B', 'C'],
       payload: () => {}
     }
 
