@@ -377,6 +377,7 @@ By setting `emitRequestType` to `true` the middleware will also emit `YOUR_ACTIO
 ## Action properties
 We will explore what properties there are to be used for our new actions..
 
+A valid shapeshifter action returns a `Promise`.
 
 
 #### `type <string>`
@@ -600,7 +601,7 @@ This is used in combination with the [`repeat`](#repeat-function) function. How 
         * `state <object>`
         * `getState <function>`
 
-Same as `tapBeforeCall <function>` but is called **after** the API request was made.
+Same as `tapBeforeCall <function>` but is called **after** the API request was made _however not finished_.
 
 #### `auth <boolean>`
 Default is **false**.
