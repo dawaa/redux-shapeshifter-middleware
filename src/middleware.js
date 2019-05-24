@@ -52,14 +52,13 @@ const middleware = (options) => {
     const isValidAction = validateAction( constants.API )( next )( action )
 
     if ( isValidAction && isValidAction.constructor === String ) {
-      action && console.error(
+      process.env.NODE_ENV !== 'test' && action && console.error(
         `redux-shapeshifter-middleware: ${ isValidAction } ` +
         `=> ${JSON.stringify( action )}`
       )
-      return next()
+      return
     } else if ( ! isValidAction ) {
-      console.log('nihao');
-      return next()
+      return
     }
 
     // Prepare to cancel a request

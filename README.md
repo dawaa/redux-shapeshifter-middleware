@@ -45,6 +45,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
 * [How to use?](#how-to-use)
     * [Normal example](#normal-example)
     * [Generator example](#generator-example)
+    * [Chain example](#chain-example)
 
 ______________________________________________________
 
@@ -74,7 +75,7 @@ const apiMiddleware = shapeshifter({
      *  }
      */
     auth: {
-        user: 'sessionid'
+        user: 'sessionid',
     },
     fallbackToAxiosStatusResponse: true, // default is: true
     // Above tells the middleware to fallback to Axios status response if
@@ -83,7 +84,7 @@ const apiMiddleware = shapeshifter({
     // If you however would like to deal with the status responses yourself you might
     // want to set this to false and then in the response object from your back-end
     // always provide a `status` property.
-    useOnlyAxiosStatusResponse: true // default is: false
+    useOnlyAxiosStatusResponse: true, // default is: false
     // Above would ignore `fallbackToAxiosStatusResponse` and
     // `customSuccessResponses` if set to true. This means that we will use
     // Axios response object and its status code instead of relying on one
@@ -97,8 +98,8 @@ const store = createStore(
     applyMiddleware(
         // ... other middlewares
         someMiddleware,
-        apiMiddleware
-    )
+        apiMiddleware,
+    ),
 )
 ```
 ______________________________________________________
@@ -114,11 +115,11 @@ const shapeshifterOpts = {
 
     auth: {
         user: {
-            sessionid: true
+            sessionid: true,
             // If you wish to make sure a property is NOT present
             // you may pass `false` instead.. note that this means
             // the back-end would have to deal with the incoming data.
-        }
+        },
     },
 
     /**
@@ -161,8 +162,8 @@ const store = createStore(
     applyMiddleware(
         // ... other middlewares
         someMiddleware,
-        apiMiddleware
-    )
+        apiMiddleware,
+    ),
 )
 ```
 ______________________________________________________
@@ -176,7 +177,7 @@ const shapeshifterOpts = {
     base: 'http://api.url/v1/',
     auth: {
         headers: {
-            'Authorization': 'Bearer #user.token'
+            'Authorization': 'Bearer #user.token',
             // Above will append the key ("Authorization") to each http request being made
             // that has the `payload.auth` set to true.
             // The value of the key has something weird in it, "#user.token". What this means is
@@ -185,7 +186,7 @@ const shapeshifterOpts = {
             //
             // e.g. this could be used more than once, or it could also be just for deeper values
             // 'Bearer #user.data.private.token'.
-        }
+        },
     },
     // .. retracted code, because it's the same as above.
 }
@@ -223,13 +224,13 @@ __Example 1__ with a shallow value to check:
 const apiMiddleware = shapeshifter({
   // .. retracted code
   auth: {
-    user: 'sessionid'
-  }
+    user: 'sessionid',
+  },
 })
 ```
 Looking at __Example 1__ it would on any HTTP request being made with `ACTION.payload.auth = true` would check the Store for the properties `user` and within that `sessionid` and pass the value found to the request as a parameter.
 
-__Example 2__ with a shallow value to disallow:
+__Example 2__ with a nested value to disallow:
 ```js
 const apiMiddleware = shapeshifter({
   // .. retracted code
@@ -237,10 +238,10 @@ const apiMiddleware = shapeshifter({
     user: 'sessionid',
     profile: {
       account: {
-        freeMember: false
-      }
-    }
-  }
+        freeMember: false,
+      },
+    },
+  },
 })
 ```
 Passing a `boolean` as the value will check that the property does not exist on the current Store, if it does a warning will be emitted and the request will not be made. Could be done the other way around, if you pass `true` it would be required to have that property in the Store.. although it would be up to the back-end to evaluate the value coming from the Store in that case.
@@ -258,8 +259,8 @@ const apiMiddleware = shapeshifter({
 
       // or even multiple values
       'custom-header': 'id=#user.id name=#user.private.name email=#user.private.data.email',
-    }
-  }
+    },
+  },
 })
 ```
 __Example 3__ allows us to pass headers for authorization on requests having the `ACTION.payload.auth` set to __true__.
@@ -282,7 +283,7 @@ Example of action dispatched upon storing of ETag:
 {
   type: valuePassedTo_dispatchETagCreationType,
   ETag: 'randomETagValue',
-  key: '/fetch/users/'
+  key: '/fetch/users/',
 }
 ```
 
@@ -305,7 +306,7 @@ If nothing passed to this property the following will be the default headers pas
 ```
 {
   'If-None-Match': 'some-etag-value',
-  'Cache-Control': 'private, must-revalidate'
+  'Cache-Control': 'private, must-revalidate',
 }
 ```
 
@@ -377,6 +378,7 @@ By setting `emitRequestType` to `true` the middleware will also emit `YOUR_ACTIO
 ## Action properties
 We will explore what properties there are to be used for our new actions..
 
+A valid shapeshifter action returns a `Promise`.
 
 
 #### `type <string>`
@@ -384,7 +386,8 @@ Nothing unusual here, just what type we send out to the system.. For the middlew
 
 ```javascript
 const anActionFn = () => ({
-    type: 'API' // or API (without quotation marks) if you're using a constant
+    type: 'API', // or API (without quotation marks) if you're using a constant
+    ...
 })
 ```
 ______________________________________________________
@@ -398,8 +401,9 @@ const anActionFn = () => ({
     types: [
         WHATEVER_ACTION,
         WHATEVER_ACTION_SUCCESS,
-        WHATEVER_ACTION_FAILED
-    ]
+        WHATEVER_ACTION_FAILED,
+    ],
+    ...
 })
 ```
 ______________________________________________________
@@ -413,9 +417,10 @@ const anActionFn = () => ({
     types: [
         WHATEVER_ACTION,
         WHATEVER_ACTION_SUCCESS,
-        WHATEVER_ACTION_FAILED
+        WHATEVER_ACTION_FAILED,
     ],
-    method: 'post' // default is: get
+    method: 'post', // default is: get
+    ...
 })
 ```
 ______________________________________________________
@@ -437,10 +442,10 @@ const anActionFn = () => ({
     types: [
         WHATEVER_ACTION,
         WHATEVER_ACTION_SUCCESS,
-        WHATEVER_ACTION_FAILED
+        WHATEVER_ACTION_FAILED,
     ],
     payload: store => ({
-    })
+    }),
     // or if you fancy destructuring
     // payload: ({ dispatch, state }) => ({})
 ```
@@ -454,11 +459,11 @@ const anActionFn = () => ({
     types: [
         WHATEVER_ACTION,
         WHATEVER_ACTION_SUCCESS,
-        WHATEVER_ACTION_FAILED
+        WHATEVER_ACTION_FAILED,
     ],
     payload: store => ({
         // THE BELOW PROPERTIES GO IN HERE <<<<<<
-    })
+    }),
 ```
 
 #### `url <string>`
@@ -530,7 +535,7 @@ export const fetchUser = () => ({
 
       if (data && data.user && data.user.isOnline) {
         return true // This tells the middleware to call
-                    // on `success`-method defined above
+                    // the `success`-method defined above
                     // with the Axios response object.
                     //
                     // Same thing would've happened if one
@@ -597,7 +602,7 @@ This is used in combination with the [`repeat`](#repeat-function) function. How 
         * `state <object>`
         * `getState <function>`
 
-Same as `tapBeforeCall <function>` but is called **after** the API request was made.
+Same as `tapBeforeCall <function>` but is called **after** the API request was made _however not finished_.
 
 #### `auth <boolean>`
 Default is **false**.
@@ -646,7 +651,7 @@ const success = (type, payload, meta, store) => ({
     // We can from here reach anything put inside `meta` property
     // inside the action definition.
     type: type,
-    heeliesAreCool: meta.randomKeyHere.heeliesAreCool
+    heeliesAreCool: meta.randomKeyHere.heeliesAreCool,
 })
 
 const fetchHeelies = () => ({
@@ -654,20 +659,20 @@ const fetchHeelies = () => ({
     types: [
         FETCH_HEELIES,
         FETCH_HEELIES_SUCCESS,
-        FETCH_HEELIES_FAILED
+        FETCH_HEELIES_FAILED,
     ],
     payload: store => ({
         url: '/fetch/heelies/',
         params: {
-            color: 'pink'
+            color: 'pink',
         },
-        success: success
+        success: success,
     }),
     meta: {
         randomKeyHere: {
-            heeliesAreCool: true
-        }
-    }
+            heeliesAreCool: true,
+        },
+    },
 ```
 
 #### `meta.mergeParams <boolean>`
@@ -763,12 +768,12 @@ const success = function* (type, payload, { dispatch, state }) {
     // Conditionally if we want to emit to the
     // system that the call is done.
     return {
-        type
+        type,
     }
     // Otherwise the middleware itself would emit
     return {
         type: 'API_VOID',
-        LAST_ACTION: 'FETCH_USER'
+        LAST_ACTION: 'FETCH_USER',
     }
 }
 
@@ -777,7 +782,7 @@ const success = function* (type, payload, { dispatch, state }) {
 const failure = (type, error) => ({
     type    : type,
     message : 'Failed to fetch all users.',
-    error   : error
+    error   : error,
 })
 
 export const fetchAllUsers = userId => ({
@@ -795,6 +800,30 @@ export const fetchAllUsers = userId => ({
         },
         success: success,
         failure: failure
-    })
+    }),
 })
+```
+
+### Chain example
+Just like the [`normal example`](#normal-example) but this illustrates it can be chained.
+
+```js
+// ... same code as the normal example
+
+export const fetchAllUsers = () => ({
+    ... // same code as the normal example
+})
+
+// another-file.js
+import { fetchAllUsers } from './somewhere.js';
+
+fetchAllUsers()
+    .then(response => {
+        // this .then() happens after the dispatch of `*_SUCCESS` has happened.
+        // here you have access to the full axios `response` object
+    })
+    .catch(error => {
+        // this .catch() happens after the dispatch of `*_FAILED` has happened.
+        // here you have access to the `error` that was thrown
+    })
 ```

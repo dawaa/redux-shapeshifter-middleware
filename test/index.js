@@ -620,10 +620,10 @@ describe( 'shapeshifter middleware', () => {
     assert.deepEqual(stub.args[ 0 ][ 0 ], expected)
   } )
 
-  it ( 'should ignore if action is undefined', () => {
+  it ( 'should not call next() if action is undefined', () => {
     const action = undefined
     dispatch( action )
-    chai.assert.isTrue( next.called )
+    chai.assert.isFalse( next.called )
   } )
 
   it ( 'should ignore action if not of type API', () => {
@@ -634,9 +634,6 @@ describe( 'shapeshifter middleware', () => {
   } )
 
   it ( 'should ignore API action with no payload property', () => {
-    const mock = sandbox.mock( console )
-    mock.expects( 'error' ).once()
-
     const action = {
       type: 'API',
       params: {
@@ -645,14 +642,10 @@ describe( 'shapeshifter middleware', () => {
     }
 
     dispatch( action )
-    chai.assert.isTrue( next.called )
-    chai.assert.isTrue( mock.verify() )
+    chai.assert.isFalse( next.called )
   } )
 
   it ( 'should ignore API action with payload property but not a function', () => {
-    const mock = sandbox.mock( console )
-    mock.expects( 'error' ).once()
-
     const action = {
       type: 'API',
       payload: {
@@ -661,8 +654,12 @@ describe( 'shapeshifter middleware', () => {
     }
 
     dispatch( action )
-    chai.assert.isTrue( next.called )
-    chai.assert.isTrue( mock.verify() )
+    chai.assert.isFalse( next.called )
+  } )
+
+  it ( 'should call next() if action is of type Function', () => {
+    dispatch(() => {})
+    chai.assert.called( next )
   } )
 
   it ( 'should call action.payload() method with dispatch and state', async () => {
