@@ -634,9 +634,6 @@ describe( 'shapeshifter middleware', () => {
   } )
 
   it ( 'should ignore API action with no payload property', () => {
-    const mock = sandbox.mock( console )
-    mock.expects( 'error' ).once()
-
     const action = {
       type: 'API',
       params: {
@@ -646,13 +643,9 @@ describe( 'shapeshifter middleware', () => {
 
     dispatch( action )
     chai.assert.isTrue( next.called )
-    chai.assert.isTrue( mock.verify() )
   } )
 
   it ( 'should ignore API action with payload property but not a function', () => {
-    const mock = sandbox.mock( console )
-    mock.expects( 'error' ).once()
-
     const action = {
       type: 'API',
       payload: {
@@ -662,7 +655,6 @@ describe( 'shapeshifter middleware', () => {
 
     dispatch( action )
     chai.assert.isTrue( next.called )
-    chai.assert.isTrue( mock.verify() )
   } )
 
   it ( 'should call action.payload() method with dispatch and state', async () => {

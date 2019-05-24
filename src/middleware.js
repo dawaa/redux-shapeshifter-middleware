@@ -52,7 +52,7 @@ const middleware = (options) => {
     const isValidAction = validateAction( constants.API )( next )( action )
 
     if ( isValidAction && isValidAction.constructor === String ) {
-      action && console.error(
+      process.env.NODE_ENV !== 'test' && action && console.error(
         `redux-shapeshifter-middleware: ${ isValidAction } ` +
         `=> ${JSON.stringify( action )}`
       )
