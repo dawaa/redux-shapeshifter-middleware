@@ -56,10 +56,9 @@ const middleware = (options) => {
         `redux-shapeshifter-middleware: ${ isValidAction } ` +
         `=> ${JSON.stringify( action )}`
       )
-      return next()
+      return
     } else if ( ! isValidAction ) {
-      console.log('nihao');
-      return next()
+      return
     }
 
     // Prepare to cancel a request
