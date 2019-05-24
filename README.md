@@ -45,6 +45,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
 * [How to use?](#how-to-use)
     * [Normal example](#normal-example)
     * [Generator example](#generator-example)
+    * [Chain example](#chain-example)
 
 ______________________________________________________
 
@@ -801,4 +802,28 @@ export const fetchAllUsers = userId => ({
         failure: failure
     }),
 })
+```
+
+### Chain example
+Just like the [`normal example`](#normal-example) but this illustrates it can be chained.
+
+```js
+// ... same code as the normal example
+
+export const fetchAllUsers = () => ({
+    ... // same code as the normal example
+})
+
+// another-file.js
+import { fetchAllUsers } from './somewhere.js';
+
+fetchAllUsers()
+    .then(response => {
+        // this .then() happens after the dispatch of `*_SUCCESS` has happened.
+        // here you have access to the full axios `response` object
+    })
+    .catch(error => {
+        // this .catch() happens after the dispatch of `*_FAILED` has happened.
+        // here you have access to the `error` that was thrown
+    })
 ```
