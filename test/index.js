@@ -657,6 +657,11 @@ describe( 'shapeshifter middleware', () => {
     chai.assert.isFalse( next.called )
   } )
 
+  it ( 'should call next() if action is of type Function', () => {
+    dispatch(() => {})
+    chai.assert.called( next )
+  } )
+
   it ( 'should call action.payload() method with dispatch and state', async () => {
     const payloadSpy = sinon.spy()
     const action = {

@@ -1,7 +1,7 @@
 import Result from 'folktale/result'
 
 export default next => actionOrMsg => {
-  if ( actionOrMsg.constructor === Object ) {
+  if ( actionOrMsg && actionOrMsg.constructor !== String ) {
     next( actionOrMsg )
     return Result.Error( false )
   } else {
