@@ -20,7 +20,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
     * [useETags](#useetags-boolean)
     * [dispatchETagCreationType](#dispatchetagcreationtype-string)
     * [matchingETagHeaders](#matchingetagheaders-function)
-    * [emitRequestType](#emitrequesttype)
+    * [emitRequestType](#emitrequesttype-boolean)
     * [useFullResponseObject](#usefullresponseobject-boolean)
 * [Action properties](#action-properties)
     * [type](#type-string)
