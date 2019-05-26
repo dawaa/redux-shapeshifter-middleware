@@ -51,8 +51,6 @@ const middleware = (options) => {
     const {
       base,
       constants,
-      fallbackToAxiosStatusResponse,
-      useOnlyAxiosStatusResponse,
     } = middlewareOpts;
 
     const isValidAction = validateAction( constants.API )( next )( action )
