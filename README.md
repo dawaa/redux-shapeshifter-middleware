@@ -21,6 +21,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
     * [dispatchETagCreationType](#dispatchetagcreationtype-string)
     * [matchingETagHeaders](#matchingetagheaders-function)
     * [emitRequestType](#emitrequesttype)
+    * [useFullResponseObject](#usefullresponseobject-boolean)
 * [Action properties](#action-properties)
     * [type](#type-string)
     * [types](#types-array)
@@ -39,6 +40,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
             * [tapAfterCall](#tapaftercall-function)
             * [auth](#auth-boolean)
             * [ETagCallback](#etagcallback-objectfunction)
+            * [useFullResponseObject](#usefullresponseobject-boolean)
     * [meta](#meta-object)
         * [mergeParams](#metamergeparams-boolean)
     * [axios](#axios-object)
@@ -377,6 +379,15 @@ By default `redux-shapeshifter-middleware` doesn't emit the neutral action type.
 By setting `emitRequestType` to `true` the middleware will also emit `YOUR_ACTION` along with its respective types, `YOUR_ACTION_SUCCESS` and `YOUR_ACTION_FAILED` based on the situation.
 
 
+#### `useFullResponseObject <boolean>`
+_`default: false`_
+
+By default `redux-shapeshifter-middleware` actions will upon success return `response.data` for you to act upon, however sometimes it's wanted to actually have the entire [`response`](axios-response-schema) object at hand. This option allows to define in one place if all shapeshifter actions should return the [`response`](axios-response-schema) object.
+
+However if you're only interested in some actions returning the full `response` object you could have a look at [`ACTION.payload.useFullResponseObject`](#usefullresponseobject-boolean) to define it per action instead.
+
+
+
 
 ## Action properties
 We will explore what properties there are to be used for our new actions..
@@ -488,6 +499,7 @@ Is called before the API request is made, also the function receives an object a
 * Arguments
     * `type <string>`
     * `payload <object>`
+        * Do note that by default the middleware returns the result from [`response.data`](axios-response-schema). If you want the full [`response`](axios-response-schema) object, have a look at [`middleware.useFullResponseObject`](#usefullresponseobject-boolean) or per action [`ACTION.payload.useFullResponseObject`](#usefullresponseobject-boolean)
     * `meta|store <object>`
         * If `meta` key is missing from the first level of the API action, then this 3rd argument will be replaced with `store`.
     * `store <object>` -- Will be 'null' if no `meta` key was defined in the first level of the API action.
@@ -638,6 +650,12 @@ If a function is provided the fuction will receive following arguments:
         * `dispatch <function>`
         * `state <object>`
         * `getState <function>`
+
+#### `useFullResponseObject <boolean>`
+_`default: false`_
+
+In the case you still want the middleware to return [`response.data`](axios-response-schema) for your other actions but only one or few should return the full [`response`](axios-response-schema) object you could set this property to `true` and the action will in it's [`success`](#success-function)-method return the full [`response`](axios-response-schema) object.
+
 ______________________________________________________
 
 

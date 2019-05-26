@@ -27,6 +27,7 @@ const defaultMiddlewareOpts = {
   useOnlyAxiosStatusResponse: false,
   useETags: false,
   emitRequestType: false,
+  useFullResponseObject: false,
 }
 
 export let middlewareOpts = {}
@@ -106,7 +107,8 @@ const middleware = (options) => {
         interval = 5000,
         ETagCallback = () => {},
         tapBeforeCall = undefined,
-        tapAfterCall = undefined
+        tapAfterCall = undefined,
+        useFullResponseObject = false,
       },
       meta = {
         dispatch,
@@ -117,6 +119,12 @@ const middleware = (options) => {
         cancelToken: source.token
       }
     } = action;
+
+    if ( useFullResponseObject != null && useFullResponseObject.constructor !== Boolean ) {
+      throw new Error(
+        `action.payload.useFullResponseObject is expected to be of type Boolean, got instead ${ useFullResponseObject }`,
+      )
+    }
 
     if ( middlewareOpts.useETags && urlETags[ uris ] ) {
       axiosConfig.headers = axiosConfig.headers || {}
@@ -298,6 +306,7 @@ const middleware = (options) => {
           types: { REQUEST, SUCCESS, FAILURE },
           meta,
           repeat,
+          useFullResponseObject,
         })
       )
       .then(response => {

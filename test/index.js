@@ -99,6 +99,7 @@ describe( 'shapeshifter middleware', () => {
       useOnlyAxiosStatusResponse: false,
       useETags: false,
       emitRequestType: false,
+      useFullResponseObject: false,
     } )
   } )
 
@@ -144,6 +145,7 @@ describe( 'shapeshifter middleware', () => {
         useOnlyAxiosStatusResponse: false,
         useETags: false,
         emitRequestType: false,
+        useFullResponseObject: false,
       }
     )
   } )
@@ -703,6 +705,27 @@ describe( 'shapeshifter middleware', () => {
     ).to.throw( Error )
   } )
 
+  it ( 'should throw if `ACTION.payload.useFullResponseObject` is not of type Boolean', () => {
+    const action = {
+      type: 'API',
+      types: ['A', 'B', 'C'],
+      payload: () => ({ useFullResponseObject: 'crash-test' }),
+    }
+
+    chai.expect(
+      () => dispatch( action )
+    ).to.throw( Error, `action.payload.useFullResponseObject is expected to be of type Boolean, got instead crash-test` )
+  } )
+
+  it ( 'should throw if `middleware.useFullResponseObject` is not of type Boolean', () => {
+    chai.expect(
+      () => setupMiddleware({
+        base                  : 'http://some.api/v1',
+        useFullResponseObject : 'crash-me',
+      })
+    ).to.throw( Error, `middleware.useFullResponseObject is expected to be of type Boolean, got instead crash-me` )
+  } )
+
   it ( 'should throw when middleware config contain errors', () => {
     chai.expect(
       () => setupMiddleware({ constants : null })
@@ -719,6 +742,103 @@ describe( 'shapeshifter middleware', () => {
       MiddlewareOptionsValidationError,
       /middleware\.\w+[\s\S]*middleware\.\w+/,
     )
+  } )
+
+  it ( 'should not return full response object when middleware.useFullResponseObject = false', async () => {
+    const payload = {
+      data: { status: 200 },
+      headers: { someHeader: 'some-value' },
+    }
+    setupMiddleware({
+      base                  : 'http://some.api/v1',
+      useFullResponseObject : false,
+    })
+    stubApiResponse( payload )
+    const spy = sandbox.spy()
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+        success: spy,
+        useFullResponseObject: false,
+      }),
+    }
+    await dispatch( action )
+    await flushPromises()
+
+    assert.deepInclude( spy.firstCall.args, { status: 200 } )
+  } )
+
+  it ( 'should return full response object when middleware.useFullResponseObject = true', async () => {
+    const payload = {
+      data: { status: 200 },
+      headers: { someHeader: 'some-value' },
+    }
+    setupMiddleware({
+      base                  : 'http://some.api/v1',
+      useFullResponseObject : true,
+    })
+    stubApiResponse( payload )
+    const spy = sandbox.spy()
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+        success: spy,
+      }),
+    }
+    await dispatch( action )
+    await flushPromises()
+
+    assert.deepInclude( spy.firstCall.args, payload )
+  } )
+
+  it ( 'should not return full response object when ACTION.payload.useFullResponseObject = false', async () => {
+    const payload = {
+      data: { status: 200 },
+      headers: { someHeader: 'some-value' },
+    }
+    setupMiddleware({ base : 'http://some.api/v1' })
+    stubApiResponse( payload )
+    const spy = sandbox.spy()
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+        success: spy,
+        useFullResponseObject: false,
+      }),
+    }
+    await dispatch( action )
+    await flushPromises()
+
+    assert.deepInclude( spy.firstCall.args, { status: 200 } )
+  } )
+
+  it ( 'should return full response object when ACTION.payload.useFullResponseObject = true', async () => {
+    const payload = {
+      data: { status: 200 },
+      headers: { someHeader: 'some-value' },
+    }
+    setupMiddleware({ base : 'http://some.api/v1' })
+    stubApiResponse( payload )
+    const spy = sandbox.spy()
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+        success: spy,
+        useFullResponseObject: true,
+      }),
+    }
+    await dispatch( action )
+    await flushPromises()
+
+    assert.deepInclude( spy.firstCall.args, payload )
   } )
 
   it ( 'should emit request type if set to true', async () => {

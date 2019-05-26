@@ -8,6 +8,7 @@ import isCustomSuccessResponsesDefined from './isCustomSuccessResponsesDefined'
 import isUseOnlyAxiosStatusResponseDefined from './isUseOnlyAxiosStatusResponseDefined'
 import isUseETagsDefined from './isUseETagsDefined'
 import isEmitRequestTypeDefined from './isEmitRequestTypeDefined'
+import isUseFullResponseObjectDefined from './isUseFullResponseObjectDefined'
 
 export class MiddlewareOptionsValidationError extends Error {
   constructor(message) {
@@ -25,6 +26,7 @@ export default opts => Validation.Success()
   .concat( isUseOnlyAxiosStatusResponseDefined( opts.useOnlyAxiosStatusResponse ) )
   .concat( isUseETagsDefined( opts.useETags ) )
   .concat( isEmitRequestTypeDefined( opts.emitRequestType ) )
+  .concat( isUseFullResponseObjectDefined( opts.useFullResponseObject ) )
   .matchWith({
     Success: _ => opts,
     Failure: ({ value }) => {
