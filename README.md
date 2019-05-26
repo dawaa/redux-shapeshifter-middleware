@@ -210,11 +210,22 @@ _`default: ''`_
 This sets the base url for all API calls being made through this middleware. Could be overwritten by using the `axios.baseURL` property on the Action.
 
 #### `constants <object>`
-* API `<string>` _default: 'API'_
+* API `<string>`
+
+  _`default: 'API'`_
+
   This is the **type** this middleware will look for when actions are being dispatched.
-* API_ERROR `<string>` _default: 'API_ERROR'_
+
+* API_ERROR `<string>`
+
+  _`default: 'API_ERROR'`_
+
   When an http request fails, this is the type that will be dispatched and could be used to return a visual response to the end-user e.g. on a failed login attempt.
-* API_VOID `<string>` _default: 'API_VOID'_
+
+* API_VOID `<string>`
+
+  _`default: undefined`_
+
   Upon success of a __generator__ function we have the choice to pass a type of our own, if the return statement is omitted or if there is no returned object with a key `type` then this will be dispatched as the `type` inside an object, along with another key `LAST_ACTION` which references the type that initiated the process.
 
 #### `auth <object>`
