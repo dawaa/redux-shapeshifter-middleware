@@ -19,6 +19,7 @@ import shapeshifter, {
   urlETags,
 } from '../src/middleware'
 import * as callStack from '../src/callStack'
+import { MiddlewareOptionsValidationError } from '../src/utils/validateMiddlewareOptions'
 
 const { assert } = chai
 
@@ -700,6 +701,24 @@ describe( 'shapeshifter middleware', () => {
     chai.expect(
       () => dispatch( action )
     ).to.throw( Error )
+  } )
+
+  it ( 'should throw when middleware config contain errors', () => {
+    chai.expect(
+      () => setupMiddleware({ constants : null })
+    ).to.throw( MiddlewareOptionsValidationError )
+  } )
+
+  it ( 'should throw when middleware config contains multiple errors', () => {
+    chai.expect(
+      () => setupMiddleware({
+        base: { url: 'wrong-way' },
+        constants : null,
+      })
+    ).to.throw(
+      MiddlewareOptionsValidationError,
+      /middleware\.\w+[\s\S]*middleware\.\w+/,
+    )
   } )
 
   it ( 'should emit request type if set to true', async () => {

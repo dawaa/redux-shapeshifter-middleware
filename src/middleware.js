@@ -12,6 +12,7 @@ import {
 import * as callStack from './callStack'
 import handleResponse from './handleResponse'
 import validateAction from './utils/validateAction'
+import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
 
 const defaultMiddlewareOpts = {
   base: '',
@@ -32,7 +33,11 @@ export let middlewareOpts = {}
 export const urlETags = {}
 
 const middleware = (options) => {
-  middlewareOpts = { ...defaultMiddlewareOpts, ...options }
+  middlewareOpts = validateMiddlewareOptions({
+    ...defaultMiddlewareOpts,
+    ...options,
+  })
+
   // Clear trailing slash
   middlewareOpts.base = middlewareOpts.base.replace( /\/$/, '' )
 
