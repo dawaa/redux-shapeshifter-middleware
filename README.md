@@ -23,27 +23,27 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
     * [emitRequestType](#emitrequesttype-boolean)
     * [useFullResponseObject](#usefullresponseobject-boolean)
 * [Action properties](#action-properties)
-    * [type](#type-string)
-    * [types](#types-array)
-    * [method](#method-string)
-    * [payload](#payload-function)
+    * [type](#actiontype-string)
+    * [types](#actiontypes-array)
+    * [method](#actionmethod-string)
+    * [payload](#actionpayload-function)
         * [payload properties](#inside-payload-properties)
-            * [url](#url-string)
-            * [params](#params-object)
-            * [repeat](#repeat-function)
+            * [url](#actionpayloadurl-string)
+            * [params](#actionpayloadparams-object)
+            * [repeat](#actionpayloadrepeat-function)
               * [Example returning boolean](#example-using-boolean)
               * [Example returning custom payload](#example-using-custom-payload)
-            * [interval](#interval-integer)
-            * [tapBeforeCall](#tapbeforecall-function)
-            * [success](#success-function)
-            * [failure](#failure-function)
-            * [tapAfterCall](#tapaftercall-function)
-            * [auth](#auth-boolean)
-            * [ETagCallback](#etagcallback-objectfunction)
-            * [useFullResponseObject](#usefullresponseobject-boolean)
-    * [meta](#meta-object)
-        * [mergeParams](#metamergeparams-boolean)
-    * [axios](#axios-object)
+            * [interval](#actionpayloadinterval-integer)
+            * [tapBeforeCall](#actionpayloadtapbeforecall-function)
+            * [success](#actionpayloadsuccess-function)
+            * [failure](#actionpayloadfailure-function)
+            * [tapAfterCall](#actionpayloadtapaftercall-function)
+            * [auth](#actionpayloadauth-boolean)
+            * [ETagCallback](#actionpayloadetagcallback-objectfunction)
+            * [useFullResponseObject](#actionpayloadusefullresponseobject-boolean)
+    * [meta](#actionmeta-object)
+        * [mergeParams](#actionmetamergeparams-boolean)
+    * [axios](#actionaxios-object)
 * [How to use?](#how-to-use)
     * [Normal example](#normal-example)
     * [Generator example](#generator-example)
@@ -70,7 +70,7 @@ import shapeshifter                     from 'redux-shapeshifter-middleware';
 const apiMiddleware = shapeshifter({
     base: 'http://api.url/v1/',
     /**
-     * If payload.auth is set to `true` this will kick in and add the
+     * If ACTION.payload.auth is set to `true` this will kick in and add the
      * properties added here to the API request.
      *
      * Note: These values will be taken from Redux store
@@ -186,7 +186,7 @@ const shapeshifterOpts = {
         headers: {
             'Authorization': 'Bearer #user.token',
             // Above will append the key ("Authorization") to each http request being made
-            // that has the `payload.auth` set to true.
+            // that has the `ACTION.payload.auth` set to true.
             // The value of the key has something weird in it, "#user.token". What this means is
             // that when the request is made this weird part will be replaced with the actual
             // value from the Redux store.
@@ -207,7 +207,7 @@ All options that the middleware can take.
 #### `base <string>`
 _`default: ''`_
 
-This sets the base url for all API calls being made through this middleware. Could be overwritten by using the `axios.baseURL` property on the Action.
+This sets the base url for all API calls being made through this middleware. Could be overwritten by using the [`ACTION.axios.baseURL`](#actionaxios-object) property on the Action.
 
 #### `constants <object>`
 * API `<string>`
@@ -231,7 +231,7 @@ This sets the base url for all API calls being made through this middleware. Cou
 #### `auth <object>`
 _`default: undefined`_
 
-When making a request you can pass the `auth <boolean>` property to [`payload <object>`](#payload-function), doing this will activate this object which in return will pass the value as a parameter to the request being made.
+When making a request you can pass the `ACTION.payload.auth <boolean>` property to [`ACTION.payload <object>`](#actionpayload-function), doing this will activate this object which in return will pass the value as a parameter to the request being made.
 
 > Note that any properties or values passed within the auth {} object are connected to the Store.
 
@@ -397,7 +397,7 @@ _`default: false`_
 
 By default `redux-shapeshifter-middleware` actions will upon success return `response.data` for you to act upon, however sometimes it's wanted to actually have the entire [`response`](axios-response-schema) object at hand. This option allows to define in one place if all shapeshifter actions should return the [`response`](axios-response-schema) object.
 
-However if you're only interested in some actions returning the full `response` object you could have a look at [`ACTION.payload.useFullResponseObject`](#usefullresponseobject-boolean) to define it per action instead.
+However if you're only interested in some actions returning the full `response` object you could have a look at [`ACTION.payload.useFullResponseObject`](#actionpayloadusefullresponseobject-boolean) to define it per action instead.
 
 
 
@@ -408,7 +408,7 @@ We will explore what properties there are to be used for our new actions..
 A valid shapeshifter action returns a `Promise`.
 
 
-#### `type <string>`
+#### `ACTION.type <string>`
 Nothing unusual here, just what type we send out to the system.. For the middleware to pick it up, a classy 'API' would do, unless you specified otherwise in the set up of shapeshifter.
 
 ```javascript
@@ -419,7 +419,7 @@ const anActionFn = () => ({
 ```
 ______________________________________________________
 
-#### `types <array>`
+#### `ACTION.types <array>`
 An array containing your actions
 
 ```javascript
@@ -435,7 +435,7 @@ const anActionFn = () => ({
 ```
 ______________________________________________________
 
-#### `method <string>`
+#### `ACTION.method <string>`
 _`default: 'get'`_
 
 ```javascript
@@ -452,7 +452,7 @@ const anActionFn = () => ({
 ```
 ______________________________________________________
 
-#### `payload <function>`
+#### `ACTION.payload <function>`
 * Arguments
     * store `<object>`
         * `#dispatch() <function>`
@@ -478,7 +478,7 @@ const anActionFn = () => ({
 ```
 
 ### Inside payload properties
-Acceptable properties to be used by the returned object from `payload`
+Acceptable properties to be used by the returned object from `ACTION.payload`
 
 ```javascript
 const anActionFn = () => ({
@@ -493,11 +493,11 @@ const anActionFn = () => ({
     }),
 ```
 
-#### `url <string>`
+#### `ACTION.payload.url <string>`
 
-#### `params <object>`
+#### `ACTION.payload.params <object>`
 
-#### `tapBeforeCall <function>`
+#### `ACTION.payload.tapBeforeCall <function>`
 * Arguments
     * `obj <object>`
         * `params <object>`
@@ -508,25 +508,25 @@ const anActionFn = () => ({
 
 Is called before the API request is made, also the function receives an object argument.
 
-#### `success <function>`
+#### `ACTION.payload.success <function>`
 * Arguments
     * `type <string>`
     * `payload <object>`
-        * Do note that by default the middleware returns the result from [`response.data`](axios-response-schema). If you want the full [`response`](axios-response-schema) object, have a look at [`middleware.useFullResponseObject`](#usefullresponseobject-boolean) or per action [`ACTION.payload.useFullResponseObject`](#usefullresponseobject-boolean)
+        * Do note that by default the middleware returns the result from [`response.data`](axios-response-schema). If you want the full [`response`](axios-response-schema) object, have a look at [`middleware.useFullResponseObject`](#usefullresponseobject-boolean) or per action [`ACTION.payload.useFullResponseObject`](#actionpayloadusefullresponseobject-boolean)
     * `meta|store <object>`
         * If `meta` key is missing from the first level of the API action, then this 3rd argument will be replaced with `store`.
     * `store <object>` -- Will be 'null' if no `meta` key was defined in the first level of the API action.
 
 This method is run if the API call went through successfully with no errors.
 
-#### `failure <function>`
+#### `ACTION.payload.failure <function>`
 * Arguments
     * `type <string>`
     * `error <mixed>`
 
 This method is run if the API call responds with an error from the back-end.
 
-#### `repeat <function>`
+#### `ACTION.payload.repeat <function>`
 * Arguments
     * [`response <object>`](axios-response-schema) The Axios response object
     * `resolve <function>`
@@ -536,9 +536,9 @@ Inside the `repeat`-function you will have the [Axios response object](axios-res
 
 There are two primary ways to denote an action from this state, either returning a `boolean` or calling one of the two other function arguments passed to `repeat()`, namely `resolve` and `reject`.
 
-Returning a boolean from `repeat` will send the [Axios response object](axios-response-schema) to either the `success` or `failure` method of your API action as the payload.
+Returning a boolean from `ACTION.payload.repeat` will send the [Axios response object](axios-response-schema) to either the `ACTION.payload.success` or `ACTION.payload.failure` method of your API action as the payload.
 
-However if you denote your action using either `resolve` or `reject`, whatever passed to either of these two will be the payload sent to `success` or `failure`.
+However if you denote your action using either `resolve` or `reject`, whatever passed to either of these two will be the payload sent to `ACTION.payload.success` or `ACTION.payload.failure`.
 
 ##### Example using boolean
 ```js
@@ -617,12 +617,12 @@ export const fetchUser = () => ({
 })
 ```
 
-#### `interval <integer>`
+#### `ACTION.payload.interval <integer>`
 _`default: 5000`_
 
-This is used in combination with the [`repeat`](#repeat-function) function. How often we should be calling the given endpoint.
+This is used in combination with the [`ACTION.payload.repeat`](#actionpayloadrepeat-function) function. How often we should be calling the given endpoint.
 
-#### `tapAfterCall <function>`
+#### `ACTION.payload.tapAfterCall <function>`
 * Arguments
     * `obj <object>`
         * `params <object>`
@@ -630,14 +630,14 @@ This is used in combination with the [`repeat`](#repeat-function) function. How 
         * `state <object>`
         * `getState <function>`
 
-Same as `tapBeforeCall <function>` but is called **after** the API request was made _however not finished_.
+Same as `ACTION.payload.tapBeforeCall <function>` but is called **after** the API request was made _however not finished_.
 
-#### `auth <boolean>`
+#### `ACTION.payload.auth <boolean>`
 _`default: false`_
 
-If the API call is constructed with `auth: true` and the middleware set up was initialized with an `auth` key pointing to the part of the store you want to use for authorization in your API calls. Then what you set up in the initialization will be added to the requests parameters automatically for you.
+If the API call is constructed with `auth: true` and the middleware set up was initialized with an [`auth`](#auth-object) key pointing to the part of the store you want to use for authorization in your API calls. Then what you set up in the initialization will be added to the requests parameters automatically for you.
 
-#### `ETagCallback <object|function>`
+#### `ACTION.payload.ETagCallback <object|function>`
 _`default: undefined`_
 
 Requires [`useETags`](#useetags-boolean) to be set to true.
@@ -664,21 +664,21 @@ If a function is provided the fuction will receive following arguments:
         * `state <object>`
         * `getState <function>`
 
-#### `useFullResponseObject <boolean>`
+#### `ACTION.payload.useFullResponseObject <boolean>`
 _`default: false`_
 
-In the case you still want the middleware to return [`response.data`](axios-response-schema) for your other actions but only one or few should return the full [`response`](axios-response-schema) object you could set this property to `true` and the action will in it's [`success`](#success-function)-method return the full [`response`](axios-response-schema) object.
+In the case you still want the middleware to return [`response.data`](axios-response-schema) for your other actions but only one or few should return the full [`response`](axios-response-schema) object you could set this property to `true` and the action will in it's [`success`](#actionpayloadsuccess-function)-method return the full [`response`](axios-response-schema) object.
 
 ______________________________________________________
 
 
-#### `meta <object>`
+#### `ACTION.meta <object>`
 This is our jack-in-the-box prop, you can probably think of lots of cool stuff to do with this, but below I will showcase what I've used it for.
 
-Basically this allows to bridge stuff between the action and the `success()` method.
+Basically this allows to bridge stuff between the action and the `ACTION.payload.success()` method.
 
 **Note**
-Check [`Payload > "Inside payload properties" > success()`](#success-function) above to understand where these meta tags will be available.
+Check [`ACTION.payload.success`](#actionpayloadsuccess-function) above to understand where these meta tags will be available.
 
 ```javascript
 const success = (type, payload, meta, store) => ({
@@ -709,12 +709,12 @@ const fetchHeelies = () => ({
     },
 ```
 
-#### `meta.mergeParams <boolean>`
+#### `ACTION.meta.mergeParams <boolean>`
 _`default: false`_
 
-Just like this property states, it will pass anything you have under the property `payload.params` to the `meta` parameter passed to `success()` method.
+Just like this property states, it will pass anything you have under the property `ACTION.payload.params` to the `ACTION.meta` parameter passed to `ACTION.payload.success()` method.
 
-#### `axios <object>`
+#### `ACTION.axios <object>`
 This parameter allows us to use any Axios Request Config property that you can
 find under their docs.. [here](axios-request-config).
 
