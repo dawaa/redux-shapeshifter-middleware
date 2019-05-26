@@ -744,7 +744,7 @@ const success = (type, payload) => ({
     users : payload.items
 })
 
-// @param {string} type This is our _FAILED constnat
+// @param {string} type This is our _FAILED constant
 // @param {object} error The error response from our back-end
 const failure = (type, error) => ({
     type    : type,
@@ -811,7 +811,7 @@ const success = function* (type, payload, { dispatch, state }) {
     }
 }
 
-// @param {string} type This is our _FAILED constnat
+// @param {string} type This is our _FAILED constant
 // @param {object} error The error response from our back-end
 const failure = (type, error) => ({
     type    : type,
@@ -844,7 +844,7 @@ Just like the [`normal example`](#normal-example) but this illustrates it can be
 ```js
 // ... same code as the normal example
 
-export const fetchAllUsers = () => ({
+export const fetchAllUsers = userId => ({
     ... // same code as the normal example
 })
 
