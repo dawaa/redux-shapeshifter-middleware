@@ -55,8 +55,10 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
 ______________________________________________________
 
 ## Installation
-```
-$ npm|yarn install|add redux-shapeshifter-middleware
+```bash
+$ npm install redux-shapeshifter-middleware
+# or
+$ yarn add redux-shapeshifter-middleware
 ```
 #### Implementation
 
