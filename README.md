@@ -425,7 +425,7 @@ const anActionFn = () => ({
 ______________________________________________________
 
 #### `method <string>`
-Default is "**get**".
+_`default: 'get'`_
 
 ```javascript
 const anActionFn = () => ({
@@ -622,12 +622,12 @@ This is used in combination with the [`repeat`](#repeat-function) function. How 
 Same as `tapBeforeCall <function>` but is called **after** the API request was made _however not finished_.
 
 #### `auth <boolean>`
-Default is **false**.
+_`default: false`_
 
 If the API call is constructed with `auth: true` and the middleware set up was initialized with an `auth` key pointing to the part of the store you want to use for authorization in your API calls. Then what you set up in the initialization will be added to the requests parameters automatically for you.
 
 #### `ETagCallback <object|function>`
-Default is **undefined**.
+_`default: undefined`_
 
 Requires [`useETags`](#useetags-boolean) to be set to true.
 
@@ -699,7 +699,7 @@ const fetchHeelies = () => ({
 ```
 
 #### `meta.mergeParams <boolean>`
-Default is **false**.
+_`default: false`_
 
 Just like this property states, it will pass anything you have under the property `payload.params` to the `meta` parameter passed to `success()` method.
 
