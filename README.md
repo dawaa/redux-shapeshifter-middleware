@@ -47,6 +47,9 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
     * [Generator example](#generator-example)
     * [Chain example](#chain-example)
 
+[axios-response-schema]: https://github.com/axios/axios#response-schema
+[axios-request-config]: https://github.com/axios/axios#request-config
+
 ______________________________________________________
 
 ## Installation
@@ -314,7 +317,7 @@ If nothing passed to this property the following will be the default headers pas
 _`default: null`_
 
 * Arguments
-    * [response](https://github.com/axios/axios#response-schema) `<object>` The Axios response object.
+    * [response](axios-response-schema) `<object>` The Axios response object.
     * store `<object>`
         * `#dispatch() <function>`
         * `#getState <function>`
@@ -500,15 +503,15 @@ This method is run if the API call responds with an error from the back-end.
 
 #### `repeat <function>`
 * Arguments
-    * [`response <object>`](https://github.com/axios/axios#response-schema) The Axios response object
+    * [`response <object>`](axios-response-schema) The Axios response object
     * `resolve <function>`
     * `reject <function>`
 
-Inside the `repeat`-function you will have the [Axios response object](https://github.com/axios/axios#response-schema) at hand to determine yourself when you want to pass either the `*_SUCCESS` or `*_FAILED` action.
+Inside the `repeat`-function you will have the [Axios response object](axios-response-schema) at hand to determine yourself when you want to pass either the `*_SUCCESS` or `*_FAILED` action.
 
 There are two primary ways to denote an action from this state, either returning a `boolean` or calling one of the two other function arguments passed to `repeat()`, namely `resolve` and `reject`.
 
-Returning a boolean from `repeat` will send the [Axios response object](https://github.com/axios/axios#response-schema) to either the `success` or `failure` method of your API action as the payload.
+Returning a boolean from `repeat` will send the [Axios response object](axios-response-schema) to either the `success` or `failure` method of your API action as the payload.
 
 However if you denote your action using either `resolve` or `reject`, whatever passed to either of these two will be the payload sent to `success` or `failure`.
 
@@ -682,7 +685,7 @@ Just like this property states, it will pass anything you have under the propert
 
 #### `axios <object>`
 This parameter allows us to use any Axios Request Config property that you can
-find under their docs.. [here](https://github.com/axios/axios#request-config).
+find under their docs.. [here](axios-request-config).
 
 Anything added under the `ACTION.axios<object>` will have higher priority, meaning
 that it will override anything set before in the payload object that has the
