@@ -12,6 +12,7 @@ import {
 import * as callStack from './callStack'
 import handleResponse from './handleResponse'
 import validateAction from './utils/validateAction'
+import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
 
 const defaultMiddlewareOpts = {
   base: '',
@@ -26,13 +27,18 @@ const defaultMiddlewareOpts = {
   useOnlyAxiosStatusResponse: false,
   useETags: false,
   emitRequestType: false,
+  useFullResponseObject: false,
 }
 
 export let middlewareOpts = {}
 export const urlETags = {}
 
 const middleware = (options) => {
-  middlewareOpts = { ...defaultMiddlewareOpts, ...options }
+  middlewareOpts = validateMiddlewareOptions({
+    ...defaultMiddlewareOpts,
+    ...options,
+  })
+
   // Clear trailing slash
   middlewareOpts.base = middlewareOpts.base.replace( /\/$/, '' )
 
@@ -45,8 +51,6 @@ const middleware = (options) => {
     const {
       base,
       constants,
-      fallbackToAxiosStatusResponse,
-      useOnlyAxiosStatusResponse,
     } = middlewareOpts;
 
     const isValidAction = validateAction( constants.API )( next )( action )
@@ -101,7 +105,8 @@ const middleware = (options) => {
         interval = 5000,
         ETagCallback = () => {},
         tapBeforeCall = undefined,
-        tapAfterCall = undefined
+        tapAfterCall = undefined,
+        useFullResponseObject = false,
       },
       meta = {
         dispatch,
@@ -112,6 +117,12 @@ const middleware = (options) => {
         cancelToken: source.token
       }
     } = action;
+
+    if ( useFullResponseObject != null && useFullResponseObject.constructor !== Boolean ) {
+      throw new Error(
+        `action.payload.useFullResponseObject is expected to be of type Boolean, got instead ${ useFullResponseObject }`,
+      )
+    }
 
     if ( middlewareOpts.useETags && urlETags[ uris ] ) {
       axiosConfig.headers = axiosConfig.headers || {}
@@ -293,6 +304,7 @@ const middleware = (options) => {
           types: { REQUEST, SUCCESS, FAILURE },
           meta,
           repeat,
+          useFullResponseObject,
         })
       )
       .then(response => {

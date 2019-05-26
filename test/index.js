@@ -19,6 +19,7 @@ import shapeshifter, {
   urlETags,
 } from '../src/middleware'
 import * as callStack from '../src/callStack'
+import { MiddlewareOptionsValidationError } from '../src/utils/validateMiddlewareOptions'
 
 const { assert } = chai
 
@@ -32,7 +33,7 @@ const createApiAction = name => ({
 })
 
 let store, next, dispatch, middleware, sandbox = sinon.createSandbox();
-const defaultConfig = { base: 'http://cp.api/v1', auth: { user: 'sessionid' } }
+const defaultConfig = { base: 'http://some.api/v1', auth: { user: 'sessionid' } }
 const setupMiddleware = (opts = defaultConfig) => {
   store = {
     dispatch: sinon.spy(),
@@ -85,7 +86,7 @@ describe( 'shapeshifter middleware', () => {
 
   it ( 'Should set correct options', () => {
     chai.assert.deepEqual( middlewareOpts, {
-      base: 'http://cp.api/v1',
+      base: 'http://some.api/v1',
       constants: {
         API       : 'API',
         API_ERROR : 'API_ERROR',
@@ -98,13 +99,14 @@ describe( 'shapeshifter middleware', () => {
       useOnlyAxiosStatusResponse: false,
       useETags: false,
       emitRequestType: false,
+      useFullResponseObject: false,
     } )
   } )
 
   it ( 'Should set headers within `auth` prop and successfully replace values with store values', async () => {
     stubApiResponse({})
     setupMiddleware({
-      base : 'http://cp.api/v1',
+      base : 'http://some.api/v1',
       auth : {
         headers : {
           'Authorization' : 'Bearer #user.token'
@@ -126,7 +128,7 @@ describe( 'shapeshifter middleware', () => {
     assert.deepEqual(
       middlewareOpts,
       {
-        base : 'http://cp.api/v1',
+        base : 'http://some.api/v1',
         constants: {
           API       : 'API',
           API_ERROR : 'API_ERROR',
@@ -143,13 +145,14 @@ describe( 'shapeshifter middleware', () => {
         useOnlyAxiosStatusResponse: false,
         useETags: false,
         emitRequestType: false,
+        useFullResponseObject: false,
       }
     )
   } )
 
   it ( 'should ignore other rules if `useOnlyAxiosStatusResponse` is set to true', async () => {
     setupMiddleware({
-      base : 'http://cp.api/v1',
+      base : 'http://some.api/v1',
       fallbackToAxiosStatusResponse: true,
       customSuccessResponses: [ 'success' ],
       useOnlyAxiosStatusResponse: true,
@@ -178,7 +181,7 @@ describe( 'shapeshifter middleware', () => {
 
   it ( 'should pass headers correctly to Axios call', async () => {
     setupMiddleware({
-      base : 'http://cp.api/v1',
+      base : 'http://some.api/v1',
       auth : {
         headers : {
           'Authorization' : 'Bearer #user.token'
@@ -202,7 +205,7 @@ describe( 'shapeshifter middleware', () => {
 
     const expectedAxiosParams = {
       config : {
-        url: 'http://cp.api/v1/users/fetch',
+        url: 'http://some.api/v1/users/fetch',
         method: 'get',
         headers : {
           Authorization : 'Bearer verylongsupersecret123token456',
@@ -261,7 +264,7 @@ describe( 'shapeshifter middleware', () => {
 
   it ( 'should correctly merge headers if auth is also passed', async () => {
     setupMiddleware({
-      base : 'http://cp.api/v1',
+      base : 'http://some.api/v1',
       auth : {
         headers : {
           'Authorization' : 'Bearer #user.token'
@@ -290,7 +293,7 @@ describe( 'shapeshifter middleware', () => {
 
     const expected = {
       method: 'get',
-      url: 'http://cp.api/v1/users/fetch',
+      url: 'http://some.api/v1/users/fetch',
       headers : {
         Authorization  : 'Bearer verylongsupersecret123token456',
         'Content-Type' : 'application/json',
@@ -310,7 +313,7 @@ describe( 'shapeshifter middleware', () => {
 
   it ( 'should track ETag(s) and save it to an object by URI segments', async () => {
     setupMiddleware({
-      base     : 'http://cp.api/v1',
+      base     : 'http://some.api/v1',
       useETags : true,
     })
     const stub = stubApiResponse({
@@ -345,7 +348,7 @@ describe( 'shapeshifter middleware', () => {
 
   it ( 'should add default extra headers if ETag exists for URI segments', async () => {
     setupMiddleware({
-      base     : 'http://cp.api/v1',
+      base     : 'http://some.api/v1',
       useETags : true,
     })
 
@@ -383,7 +386,7 @@ describe( 'shapeshifter middleware', () => {
 
   it ( 'should add custom extra headers if ETag exists for URI segments', async () => {
     setupMiddleware({
-      base     : 'http://cp.api/v1',
+      base     : 'http://some.api/v1',
       useETags : true,
       matchingETagHeaders: ({ ETag, state }) => ({
         'a-custom-header': 'awesome',
@@ -427,7 +430,7 @@ describe( 'shapeshifter middleware', () => {
 
   it ( 'should throw adding custom extra headers if ETag exists but return value is not of type object', async () => {
     setupMiddleware({
-      base     : 'http://cp.api/v1',
+      base     : 'http://some.api/v1',
       useETags : true,
       matchingETagHeaders: () => {
       },
@@ -464,7 +467,7 @@ describe( 'shapeshifter middleware', () => {
 
   it ( 'should dispatch user-defined Type on creation of ETag', async () => {
     setupMiddleware({
-      base                     : 'http://cp.api/v1',
+      base                     : 'http://some.api/v1',
       useETags                 : true,
       dispatchETagCreationType : 'ON_ETAG_CREATION',
     })
@@ -506,7 +509,7 @@ describe( 'shapeshifter middleware', () => {
 
   it ( 'should call dispatch with ETagCallback if Object on status 304 Not Modified', async () => {
     setupMiddleware({
-      base     : 'http://cp.api/v1',
+      base     : 'http://some.api/v1',
       useETags : true,
     })
 
@@ -549,7 +552,7 @@ describe( 'shapeshifter middleware', () => {
 
   it ( 'should call ETagCallback if Function on status 304 Not Modified', async () => {
     setupMiddleware({
-      base     : 'http://cp.api/v1',
+      base     : 'http://some.api/v1',
       useETags : true,
     })
 
@@ -702,9 +705,145 @@ describe( 'shapeshifter middleware', () => {
     ).to.throw( Error )
   } )
 
+  it ( 'should throw if `ACTION.payload.useFullResponseObject` is not of type Boolean', () => {
+    const action = {
+      type: 'API',
+      types: ['A', 'B', 'C'],
+      payload: () => ({ useFullResponseObject: 'crash-test' }),
+    }
+
+    chai.expect(
+      () => dispatch( action )
+    ).to.throw( Error, `action.payload.useFullResponseObject is expected to be of type Boolean, got instead crash-test` )
+  } )
+
+  it ( 'should throw if `middleware.useFullResponseObject` is not of type Boolean', () => {
+    chai.expect(
+      () => setupMiddleware({
+        base                  : 'http://some.api/v1',
+        useFullResponseObject : 'crash-me',
+      })
+    ).to.throw( Error, `middleware.useFullResponseObject is expected to be of type Boolean, got instead crash-me` )
+  } )
+
+  it ( 'should throw when middleware config contain errors', () => {
+    chai.expect(
+      () => setupMiddleware({ constants : null })
+    ).to.throw( MiddlewareOptionsValidationError )
+  } )
+
+  it ( 'should throw when middleware config contains multiple errors', () => {
+    chai.expect(
+      () => setupMiddleware({
+        base: { url: 'wrong-way' },
+        constants : null,
+      })
+    ).to.throw(
+      MiddlewareOptionsValidationError,
+      /middleware\.\w+[\s\S]*middleware\.\w+/,
+    )
+  } )
+
+  it ( 'should not return full response object when middleware.useFullResponseObject = false', async () => {
+    const payload = {
+      data: { status: 200 },
+      headers: { someHeader: 'some-value' },
+    }
+    setupMiddleware({
+      base                  : 'http://some.api/v1',
+      useFullResponseObject : false,
+    })
+    stubApiResponse( payload )
+    const spy = sandbox.spy()
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+        success: spy,
+        useFullResponseObject: false,
+      }),
+    }
+    await dispatch( action )
+    await flushPromises()
+
+    assert.deepInclude( spy.firstCall.args, { status: 200 } )
+  } )
+
+  it ( 'should return full response object when middleware.useFullResponseObject = true', async () => {
+    const payload = {
+      data: { status: 200 },
+      headers: { someHeader: 'some-value' },
+    }
+    setupMiddleware({
+      base                  : 'http://some.api/v1',
+      useFullResponseObject : true,
+    })
+    stubApiResponse( payload )
+    const spy = sandbox.spy()
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+        success: spy,
+      }),
+    }
+    await dispatch( action )
+    await flushPromises()
+
+    assert.deepInclude( spy.firstCall.args, payload )
+  } )
+
+  it ( 'should not return full response object when ACTION.payload.useFullResponseObject = false', async () => {
+    const payload = {
+      data: { status: 200 },
+      headers: { someHeader: 'some-value' },
+    }
+    setupMiddleware({ base : 'http://some.api/v1' })
+    stubApiResponse( payload )
+    const spy = sandbox.spy()
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+        success: spy,
+        useFullResponseObject: false,
+      }),
+    }
+    await dispatch( action )
+    await flushPromises()
+
+    assert.deepInclude( spy.firstCall.args, { status: 200 } )
+  } )
+
+  it ( 'should return full response object when ACTION.payload.useFullResponseObject = true', async () => {
+    const payload = {
+      data: { status: 200 },
+      headers: { someHeader: 'some-value' },
+    }
+    setupMiddleware({ base : 'http://some.api/v1' })
+    stubApiResponse( payload )
+    const spy = sandbox.spy()
+
+    const action = {
+      ...createApiAction( 'FETCH_USER' ),
+      payload: () => ({
+        url: '/users/fetch',
+        success: spy,
+        useFullResponseObject: true,
+      }),
+    }
+    await dispatch( action )
+    await flushPromises()
+
+    assert.deepInclude( spy.firstCall.args, payload )
+  } )
+
   it ( 'should emit request type if set to true', async () => {
     setupMiddleware({
-      base            : 'http://cp.api/v1',
+      base            : 'http://some.api/v1',
       emitRequestType : true,
     })
     stubApiResponse({ data: { status: 200 } })
@@ -944,7 +1083,7 @@ describe( 'shapeshifter middleware', () => {
         const rejectSpy  = sandbox.spy()
         const resolveSpy = sandbox.spy()
         setupMiddleware({
-          base: 'http://cp.api/v1',
+          base: 'http://some.api/v1',
           handleStatusResponses(response, store) {
             if ( response.data && response.data.errors ) {
               rejectSpy()
@@ -1000,7 +1139,7 @@ describe( 'shapeshifter middleware', () => {
         const rejectSpy  = sandbox.spy()
         const resolveSpy = sandbox.spy()
         setupMiddleware({
-          base: 'http://cp.api/v1',
+          base: 'http://some.api/v1',
           handleStatusResponses(response, store) {
             if ( response.data && response.data.errors ) {
               rejectSpy()
@@ -1074,7 +1213,7 @@ describe( 'shapeshifter middleware', () => {
       const rejectSpy  = sandbox.spy()
       const resolveSpy = sandbox.spy()
       setupMiddleware({
-        base: 'http://cp.api/v1',
+        base: 'http://some.api/v1',
         handleStatusResponses(response, store) {
           if ( response.data && response.data.errors ) {
             rejectSpy()
@@ -1220,7 +1359,7 @@ describe( 'shapeshifter middleware', () => {
 
         const expected = {
           method: 'post',
-          url: 'http://cp.api/v1/users/fetch',
+          url: 'http://some.api/v1/users/fetch',
           data: {
             user_id     : 1,
             username    : 'dawaa',
@@ -1291,7 +1430,7 @@ describe( 'shapeshifter middleware', () => {
 
         const expected = {
           method: 'get',
-          url: 'http://cp.api/v1/users/fetch',
+          url: 'http://some.api/v1/users/fetch',
           params: {
             username    : 'dawaa',
             email       : 'dawaa@heaven.com',
@@ -1332,7 +1471,7 @@ describe( 'shapeshifter middleware', () => {
 
         const expected = {
           method: 'get',
-          url: 'http://cp.api/v1/users/fetch',
+          url: 'http://some.api/v1/users/fetch',
           params: {
             username  : 'dawaa',
             email     : 'dawaa@heaven.com',
@@ -1586,7 +1725,7 @@ describe( 'shapeshifter middleware', () => {
           },
           args: {
             method: 'get',
-            url: 'http://cp.api/v1/users/fetch',
+            url: 'http://some.api/v1/users/fetch',
             params: {
               sessionid   : 'abc123',
             },
@@ -1655,7 +1794,7 @@ describe( 'shapeshifter middleware', () => {
 
       it ( 'Should succeed on a custom success response', async () => {
         setupMiddleware({
-          base: 'http://cp.api/v1',
+          base: 'http://some.api/v1',
           customSuccessResponses: [ 'success' ],
         })
 

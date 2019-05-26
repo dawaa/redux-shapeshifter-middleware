@@ -22,6 +22,7 @@ export default store => next => response => async ({
   types,
   meta,
   repeat,
+  useFullResponseObject,
 }) => {
   const validatedResponse = validateResponse( response )
 
@@ -48,7 +49,11 @@ export default store => next => response => async ({
     store.dispatch(
       success(
         SUCCESS,
-        response.data,
+        (
+          middlewareOpts.useFullResponseObject || useFullResponseObject
+          ? response
+          : response.data
+        ),
         meta,
         (meta.getState && typeof meta.getState === 'function' ? null : store),
       )
