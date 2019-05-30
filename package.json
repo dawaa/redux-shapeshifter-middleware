@@ -40,11 +40,11 @@
   ],
   "dependencies": {
     "@babel/runtime": "^7.4.4",
-    "axios": "^0.17.0",
+    "axios": "^0.19.0",
     "folktale": "^2.3.2"
   },
   "peerDependencies": {
-    "axios": ">= 0.17"
+    "axios": ">= 0.19"
   },
   "devDependencies": {
     "@babel/cli": "^7.4.4",
@@ -55,7 +55,6 @@
     "@babel/plugin-transform-runtime": "^7.4.4",
     "@babel/preset-env": "^7.4.4",
     "@babel/register": "^7.4.4",
-    "axios": "^0.17.0",
     "babel-plugin-istanbul": "^5.1.4",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
