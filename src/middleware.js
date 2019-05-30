@@ -13,6 +13,7 @@ import * as callStack from './callStack'
 import handleResponse from './handleResponse'
 import validateAction from './utils/validateAction'
 import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
+import defineBodyPayload from './utils/defineBodyPayload'
 
 const defaultMiddlewareOpts = {
   base: '',
@@ -212,15 +213,14 @@ const middleware = (options) => {
       meta.params = Object.assign( {}, parameters )
     }
 
-    // Deal with how to set the body of our request, handling 'delete'
-    // as a special case
-    const params = [ 'post', 'put', 'patch' ].includes( method )
-      ? parameters
-      : (
-        method === 'delete'
-          ? { data: parameters }
-          : { params: parameters }
-      )
+    const params = defineBodyPayload( method, parameters ).matchWith({
+      Ok: ({ value }) => value,
+      Error: ({ value }) => ({ error: true, errorMsg: value }),
+    })
+
+    if ( params.error ) {
+      throw new Error( `${ REQUEST } => ${ params.errorMsg }` )
+    }
 
     const config = Object.assign(
       {},
@@ -243,26 +243,7 @@ const middleware = (options) => {
     const url = baseURL + uris
 
     let _call
-    let requestConfig = {
-      url,
-      method,
-    }
-
-    // Check if method can contain data and a config
-    if ( [ 'post', 'put', 'patch' ].indexOf( method.toLowerCase() ) !== -1 ) {
-      requestConfig = {
-        ...requestConfig,
-        data: params,
-        ...config,
-      }
-
-    } else {
-      requestConfig = {
-        ...requestConfig,
-        ...params,
-        ...config,
-      }
-    }
+    const requestConfig = { url, method, ...params, ...config, }
 
     const _store = { dispatch, state: getState(), getState }
     const processResponse = handleResponse( _store )( next )
