@@ -11,6 +11,7 @@ import {
 } from './callStack'
 import * as callStack from './callStack'
 import handleResponse from './handleResponse'
+import handleHeadersFn from './handleHeaders'
 import validateAction from './utils/validateAction'
 import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
 import defineBodyPayload from './utils/defineBodyPayload'
@@ -247,37 +248,12 @@ const middleware = (options) => {
 
     const _store = { dispatch, state: getState(), getState }
     const processResponse = handleResponse( _store )( next )
+    const handleHeaders = handleHeadersFn( dispatch )
 
     _call = axios.request( requestConfig )
 
     const call = _call
-      .then((response) => {
-        const { headers } = response
-        const normalizedHeaders = {}
-
-        if ( headers == null ) {
-          return response
-        }
-
-        Object.keys( headers ).forEach( headerKey => {
-          const header = headers[ headerKey ]
-          normalizedHeaders[ headerKey.toLowerCase() ] = header
-        } )
-
-        if ( middlewareOpts.useETags && normalizedHeaders.etag ) {
-          urlETags[ uris ] = normalizedHeaders.etag
-
-          if ( middlewareOpts.dispatchETagCreationType ) {
-            dispatch({
-              type: middlewareOpts.dispatchETagCreationType,
-              ETag: normalizedHeaders.etag,
-              key: uris,
-            })
-          }
-        }
-
-        return response
-      })
+      .then( handleHeaders( uris ) )
       .then(response =>
         processResponse( response )({
           success,
