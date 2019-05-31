@@ -12,6 +12,7 @@ import {
 import * as callStack from './callStack'
 import handleResponse from './handleResponse'
 import handleHeadersFn from './handleHeaders'
+import handleRepeaterFn from './handleRepeater'
 import validateAction from './utils/validateAction'
 import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
 import defineBodyPayload from './utils/defineBodyPayload'
@@ -249,6 +250,7 @@ const middleware = (options) => {
     const _store = { dispatch, state: getState(), getState }
     const processResponse = handleResponse( _store )( next )
     const handleHeaders = handleHeadersFn( dispatch )
+    const handleRepeater = handleRepeaterFn( dispatch )( requestConfig )
 
     _call = axios.request( requestConfig )
 
@@ -264,61 +266,14 @@ const middleware = (options) => {
           useFullResponseObject,
         })
       )
-      .then(response => {
-        if ( !response || !response._shapeShifterRepeat ) return response
-
-        return new Promise((parentResolve, parentReject) => {
-          const resolveRepeater = data => {
-            dispatch(
-              success(
-                SUCCESS,
-                data,
-                meta,
-                (meta.getState && typeof meta.getState === 'function' ? null : store),
-              )
-            )
-
-            parentResolve( data )
-            return data
-          }
-          const rejectRepeater = data => {
-            parentReject( data )
-            return data
-          }
-
-          const repeater = async () => {
-            const newRequest  = await axios.request( requestConfig )
-            const newResponse = await processResponse( newRequest )({
-              success,
-              failure,
-              types: { REQUEST, SUCCESS, FAILURE },
-              meta,
-              repeat,
-            })
-
-            delete newResponse._shapeShifterRepeat
-
-            const result = repeat(
-              newResponse,
-              resolveRepeater,
-              rejectRepeater,
-            )
-
-            if ( result === true ) {
-              return resolveRepeater( newResponse )
-            } else if ( result === false ) {
-              return rejectRepeater( newResponse )
-            } else if ( result != null && result.constructor !== Boolean ) {
-              return result
-            }
-            setTimeout(() => {
-              repeater()
-            }, interval)
-          }
-
-          return repeater()
-        })
-      })
+      .then( handleRepeater( processResponse )({
+        success,
+        failure,
+        types: { REQUEST, SUCCESS, FAILURE },
+        meta,
+        repeat,
+        interval,
+      }) )
       .catch( error => {
         // Remove call from callStack when finished
         removeFromStack( REQUEST )
