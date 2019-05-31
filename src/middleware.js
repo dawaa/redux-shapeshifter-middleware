@@ -5,14 +5,12 @@ import axios, { CancelToken } from 'axios'
 import recursiveObjFind             from './recursiveObjFind'
 import { isGeneratorFn }            from './generator'
 import { API, API_ERROR, API_VOID } from './consts'
-import {
-  removeFromStack,
-  existsInStack
-} from './callStack'
+import { existsInStack } from './callStack'
 import * as callStack from './callStack'
 import handleResponse from './handleResponse'
 import handleHeadersFn from './handleHeaders'
 import handleRepeaterFn from './handleRepeater'
+import handleErrorFn from './handleError'
 import validateAction from './utils/validateAction'
 import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
 import defineBodyPayload from './utils/defineBodyPayload'
@@ -251,6 +249,7 @@ const middleware = (options) => {
     const processResponse = handleResponse( _store )( next )
     const handleHeaders = handleHeadersFn( dispatch )
     const handleRepeater = handleRepeaterFn( dispatch )( requestConfig )
+    const handleError = handleErrorFn( dispatch )
 
     _call = axios.request( requestConfig )
 
@@ -274,31 +273,12 @@ const middleware = (options) => {
         repeat,
         interval,
       }) )
-      .catch( error => {
-        // Remove call from callStack when finished
-        removeFromStack( REQUEST )
-
-        if ( error && error.response && error.response.status === 304 ) {
-          const cb = ETagCallback
-
-          if ( cb.constructor === Object ) {
-            return dispatch( cb )
-          } else if ( cb.constructor === Function ) {
-
-            return cb({
-              type : REQUEST,
-              path : uris,
-              ETag : urlETags[ uris ],
-              ...(store === null ? meta : store)
-            })
-          }
-
-          return
-        }
-
-        dispatch( failure( FAILURE, error ) )
-        throw new Error( error )
-      })
+      .catch( handleError( ETagCallback )({
+        types: { REQUEST, FAILURE },
+        failure,
+        uri: uris,
+        store: (store === null ? meta : store),
+      }) )
 
     // Not sure of its usage atm, but it might be nice to have some where
     if ( typeof tapAfterCall === 'function' ) {
