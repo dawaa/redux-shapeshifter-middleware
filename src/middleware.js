@@ -15,6 +15,7 @@ import validateAction from './utils/validateAction'
 import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
 import defineBodyPayload from './utils/defineBodyPayload'
 import defineETags from './utils/defineETags'
+import objectStoreSubstitution from './utils/objectStoreSubstitution'
 
 const defaultMiddlewareOpts = {
   base: '',
@@ -159,28 +160,17 @@ const middleware = (options) => {
       dispatch({ type: REQUEST })
     }
 
-    // Append current logged in user's session id to the call
-    let authHeaders = false
-    if ( middlewareOpts.hasOwnProperty( 'auth' ) && auth ) {
-      if ( middlewareOpts.auth.hasOwnProperty( 'headers' ) ) {
-        authHeaders    = true
+    const requiresAuth = !!middlewareOpts.auth && auth
+    const requiresAuthHeaders = middlewareOpts.auth
+      && middlewareOpts.auth.headers
+      && middlewareOpts.auth.headers.constructor === Object
 
-        const tokenRgx = /#(\w+\.?)+/g
-        const store    = getState()
-        Object.keys( middlewareOpts.auth.headers ).map((header) => {
-          middlewareOpts.auth.headers[ header ] = middlewareOpts.auth.headers[ header ]
-            .replace( tokenRgx, (match) => {
-              const m    = match.substr( 1 ).split( '.' )
-              const prop = m.shift()
-
-              let _storeVal = store[ prop ]
-              while ( _storeVal != null && m.length ) {
-                _storeVal = _storeVal[ m.shift() ]
-              }
-
-              return _storeVal
-            } )
-        })
+    if ( requiresAuth ) {
+      if ( requiresAuthHeaders ) {
+        middlewareOpts.auth.headers = objectStoreSubstitution(
+          getState(),
+          middlewareOpts.auth.headers,
+        )
       } else {
         const findings = recursiveObjFind( getState(), middlewareOpts.auth )
 
@@ -218,12 +208,12 @@ const middleware = (options) => {
       {},
       axiosConfig,
       (
-        axiosConfig.headers || authHeaders
+        axiosConfig.headers || requiresAuthHeaders
         ?
           {
             headers: {
               ...(axiosConfig.headers ? axiosConfig.headers : {}),
-              ...(authHeaders ? middlewareOpts.auth.headers : {}),
+              ...(requiresAuthHeaders ? middlewareOpts.auth.headers : {}),
             }
           }
         :
