@@ -1,10 +1,12 @@
+import log from './utils/log'
+
 function recursiveObjFind(state, findByObj) {
   let rObj = {}
   let searchingUsingObj = false
 
   for ( let prop in findByObj ) {
     if ( state.hasOwnProperty( prop ) === false ) {
-      console.warn(
+      log.warn(
         `Tried reaching prop: ${prop}, that couldn't be found in the state tree.`
       )
       continue;

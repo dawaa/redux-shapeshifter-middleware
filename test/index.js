@@ -10,6 +10,7 @@ chai.use( chaiAsPromised )
 sinon.assert.expose(chai.assert, { prefix: '' })
 
 // internal
+import log from '../src/utils/log'
 import flushPromises     from '../src/flushPromises'
 import { isGeneratorFn } from '../src/generator'
 import shapeshifter, {
@@ -1981,9 +1982,7 @@ describe( 'shapeshifter middleware', () => {
 
       it ( 'Success generator function should throw error and not call dispatch', async () => {
         stubApiResponse({ data: { status: 200 } })
-        const mock = sandbox.mock( console )
-
-        mock.expects( 'error' ).once();
+        const mock = sandbox.mock( log ).expects( 'error' ).once()
 
         const action = {
           type: 'API',

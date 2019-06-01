@@ -1,5 +1,6 @@
 import { middlewareOpts, urlETags } from './middleware'
 import lowerCaseObjectKeys from './utils/lowerCaseObjectKeys'
+import log from './utils/log'
 
 export default dispatch => uris => response => {
   const { headers } = response
@@ -15,7 +16,7 @@ export default dispatch => uris => response => {
   const normalizedHeaders = lowerCaseObjectKeys( headers )
 
   if ( normalizedHeaders.error ) {
-    console.error( normalizedHeaders.errorMsg );
+    log.error( normalizedHeaders.errorMsg );
     return response
   }
 

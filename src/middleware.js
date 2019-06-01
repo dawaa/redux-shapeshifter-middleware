@@ -11,6 +11,7 @@ import handleResponse from './handleResponse'
 import handleHeadersFn from './handleHeaders'
 import handleRepeaterFn from './handleRepeater'
 import handleErrorFn from './handleError'
+import log from './utils/log'
 import validateAction from './utils/validateAction'
 import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
 import defineBodyPayload from './utils/defineBodyPayload'
@@ -59,10 +60,7 @@ const middleware = (options) => {
     const isValidAction = validateAction( constants.API )( next )( action )
 
     if ( isValidAction && isValidAction.constructor === String ) {
-      process.env.NODE_ENV !== 'test' && action && console.error(
-        `redux-shapeshifter-middleware: ${ isValidAction } ` +
-        `=> ${JSON.stringify( action )}`
-      )
+      action && log.error( `${ isValidAction } => ${ JSON.stringify( action ) }` )
       return
     } else if ( ! isValidAction ) {
       return

@@ -1,3 +1,4 @@
+import log from './utils/log'
 import { middlewareOpts } from './middleware'
 
 export default store => response => {
@@ -34,7 +35,7 @@ export default store => response => {
     if ( statusHandled instanceof Promise ) {
       return statusHandled
     } else {
-      console.warn(`You didn't return a Promise from 'handleStatusResponses'-method.`)
+      log.warn(`You didn't return a Promise from 'handleStatusResponses'-method.`)
     }
   } else if ( status !== 200
     && status !== 201

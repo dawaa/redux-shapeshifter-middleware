@@ -3,7 +3,10 @@ import chai  from 'chai'
 import sinon from 'sinon'
 
 // internal
+import log from '../src/utils/log'
 import recursiveObjFind from '../src/recursiveObjFind'
+
+const sandbox = sinon.createSandbox()
 
 describe ( 'Recursive Object Find module', () => {
   let state;
@@ -18,7 +21,10 @@ describe ( 'Recursive Object Find module', () => {
     }
   })
 
-  afterEach(() => state = null)
+  afterEach(() => {
+    sandbox.restore()
+    state = null
+  })
 
   it ( 'Should return correct value from a deep object', () => {
     chai.assert.deepEqual(
@@ -63,9 +69,7 @@ describe ( 'Recursive Object Find module', () => {
   } )
 
   it ( 'Should console.warn if required prop wasn\'t found', () => {
-    const mock = sinon.mock( console )
-    mock.expects( 'warn' ).once()
-
+    const mock = sandbox.mock( log ).expects( 'warn' ).once()
     const findings = recursiveObjFind(
       state,
       {
@@ -83,7 +87,6 @@ describe ( 'Recursive Object Find module', () => {
     )
 
     chai.assert.isTrue( mock.verify(), 'Should call console.warn once' )
-
-    mock.restore()
+    mock.verify()
   } )
 } )

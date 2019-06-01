@@ -1,3 +1,4 @@
+import log from './utils/log'
 import { middlewareOpts }  from './middleware'
 import { removeFromStack } from './callStack'
 
@@ -77,6 +78,6 @@ export default store => next => response => ({ success, types, meta }) => {
       // Remove call from callStack when finished
       removeFromStack( REQUEST )
 
-      console.error( `Generator ACTION had an error ==> ${ error }` )
+      log.error( `Generator ACTION had an error ==> ${ error }` )
     } )
 }
