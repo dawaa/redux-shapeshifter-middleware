@@ -1,6 +1,6 @@
 {
   "name": "redux-shapeshifter-middleware",
-  "version": "0.14.0-rc1",
+  "version": "0.15.0-rc1",
   "description": "Redux middleware for empowering your actions using `axios` and `qs` libraries combined.",
   "main": "./lib/middleware.js",
   "author": "Alejandro Andersson <alejandro.andersson@hyperisland.se>",
@@ -20,6 +20,9 @@
     "test:debug": "mocha --inspect test/*.js",
     "test:watch": "yarn run test:all --watch",
     "build:babel": "rimraf ./lib && babel src --out-dir lib --copy-files"
+  },
+  "publishConfig": {
+    "tag": "next"
   },
   "keywords": [
     "redux",
