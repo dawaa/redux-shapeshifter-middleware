@@ -3,6 +3,9 @@
   "version": "0.14.2",
   "description": "Redux middleware for empowering your actions using `axios` and `qs` libraries combined.",
   "main": "./lib/middleware.js",
+  "files": [
+    "lib"
+  ],
   "author": "Alejandro Andersson <alejandro.andersson@hyperisland.se>",
   "repository": {
     "type": "git",
