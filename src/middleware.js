@@ -14,6 +14,7 @@ import handleErrorFn from './handleError'
 import validateAction from './utils/validateAction'
 import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
 import defineBodyPayload from './utils/defineBodyPayload'
+import defineETags from './utils/defineETags'
 
 const defaultMiddlewareOpts = {
   base: '',
@@ -125,30 +126,21 @@ const middleware = (options) => {
       )
     }
 
+    const ETagHeaders = defineETags( middlewareOpts )( urlETags[ uris ] )({
+      dispatch,
+      state: getState(),
+      getState,
+    })
+
+    if ( ETagHeaders.error ) {
+      throw new Error( `redux-shapeshifter-middleware: ${ETagHeaders.errorMsg}` )
+    }
+
     if ( middlewareOpts.useETags && urlETags[ uris ] ) {
       axiosConfig.headers = axiosConfig.headers || {}
-      if ( middlewareOpts.matchingETagHeaders
-        && middlewareOpts.matchingETagHeaders.constructor === Function ) {
-        const ETagHeaders = middlewareOpts.matchingETagHeaders({
-          ETag: urlETags[ uris ],
-          dispatch,
-          state: getState(),
-          getState,
-        })
-
-        if ( typeof ETagHeaders !== 'object' ) {
-          throw new Error(
-            `Received ETagHeaders as a function but the returned value was not of type object.`
-          )
-        }
-
-        axiosConfig.headers = {
-          ...axiosConfig.headers,
-          ...ETagHeaders,
-        }
-      } else {
-        axiosConfig.headers[ 'If-None-Match' ] = urlETags[ uris ]
-        axiosConfig.headers[ 'Cache-Control' ] = 'private, must-revalidate'
+      axiosConfig.headers = {
+        ...axiosConfig.headers,
+        ...ETagHeaders,
       }
     }
 

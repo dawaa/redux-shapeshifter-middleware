@@ -459,7 +459,7 @@ describe( 'shapeshifter middleware', () => {
     assert.throws(
       () => {dispatch( action )},
       Error,
-      'Received ETagHeaders as a function but the returned value was not of type object.'
+      'redux-shapeshifter-middleware: middleware.matchingETagHeaders is expected to return a value of type Object, got instead undefined',
     )
 
     delete urlETags[ '/users/fetch' ]
