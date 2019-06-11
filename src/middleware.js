@@ -62,7 +62,7 @@ const middleware = (options) => {
       )
       return
     } else if ( ! isValidAction ) {
-      return
+      return next( action )
     }
 
     // Prepare to cancel a request

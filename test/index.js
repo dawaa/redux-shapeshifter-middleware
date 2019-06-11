@@ -36,7 +36,7 @@ let store, next, dispatch, middleware, sandbox = sinon.createSandbox();
 const defaultConfig = { base: 'http://some.api/v1', auth: { user: 'sessionid' } }
 const setupMiddleware = (opts = defaultConfig) => {
   store = {
-    dispatch: sinon.spy(),
+    dispatch: sandbox.stub(),
     getState: () => ({
       user: {
         sessionid : 'abc123',
@@ -629,10 +629,19 @@ describe( 'shapeshifter middleware', () => {
     chai.assert.isFalse( next.called )
   } )
 
+  it ( 'should return next(action) if not a valid shapeshifter action', () => {
+    const mw2 = () => 'value of mw2'
+    next.callsFake((...args) => mw2(...args))
+    const thunkAction = () => {}
+    const result = dispatch( thunkAction )
+    chai.assert.calledWith( next, thunkAction )
+    chai.assert.strictEqual( result, mw2() )
+  } )
+
   it ( 'should ignore action if not of type API', () => {
     const action = { type: 'MISS_ME', payload: {} }
     dispatch( action )
-    chai.assert.isTrue( next.called )
+    chai.assert.isTrue( next.calledOnce )
     chai.assert.isTrue( next.calledWith( action ) )
   } )
 
