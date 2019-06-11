@@ -60,7 +60,7 @@ const middleware = (options) => {
         `redux-shapeshifter-middleware: ${ isValidAction } ` +
         `=> ${JSON.stringify( action )}`
       )
-      return
+      return next( action )
     } else if ( ! isValidAction ) {
       return next( action )
     }

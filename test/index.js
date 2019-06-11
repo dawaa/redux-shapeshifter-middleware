@@ -623,12 +623,6 @@ describe( 'shapeshifter middleware', () => {
     assert.deepEqual(stub.args[ 0 ][ 0 ], expected)
   } )
 
-  it ( 'should not call next() if action is undefined', () => {
-    const action = undefined
-    dispatch( action )
-    chai.assert.isFalse( next.called )
-  } )
-
   it ( 'should return next(action) if not a valid shapeshifter action', () => {
     const mw2 = () => 'value of mw2'
     next.callsFake((...args) => mw2(...args))
@@ -643,30 +637,6 @@ describe( 'shapeshifter middleware', () => {
     dispatch( action )
     chai.assert.isTrue( next.calledOnce )
     chai.assert.isTrue( next.calledWith( action ) )
-  } )
-
-  it ( 'should ignore API action with no payload property', () => {
-    const action = {
-      type: 'API',
-      params: {
-        user: 'dawaa'
-      }
-    }
-
-    dispatch( action )
-    chai.assert.isFalse( next.called )
-  } )
-
-  it ( 'should ignore API action with payload property but not a function', () => {
-    const action = {
-      type: 'API',
-      payload: {
-        url: '/test'
-      }
-    }
-
-    dispatch( action )
-    chai.assert.isFalse( next.called )
   } )
 
   it ( 'should call next() if action is of type Function', () => {
