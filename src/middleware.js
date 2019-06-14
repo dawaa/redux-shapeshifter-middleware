@@ -271,6 +271,10 @@ const middleware = (options) => {
 
     const call = _call
       .then((response) => {
+        removeFromStack( REQUEST )
+        return response
+      })
+      .then((response) => {
         const { headers } = response
         const normalizedHeaders = {}
 
