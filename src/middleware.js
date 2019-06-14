@@ -156,7 +156,7 @@ const middleware = (options) => {
     // Only have one active request per Redux action
     const pendingCall = existsInStack( REQUEST )
     if ( pendingCall !== false ) {
-      pendingCall.cancel( `${REQUEST} call was cancelled.` )
+      pendingCall.cancel( `${REQUEST} call was canceled.` )
     }
 
     // Add call to callStack
