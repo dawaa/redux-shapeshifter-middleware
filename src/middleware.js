@@ -7,7 +7,7 @@ import { isGeneratorFn }            from './generator'
 import { API, API_ERROR, API_VOID } from './consts'
 import {
   removeFromStack,
-  existsInStack
+  existsInStack,
 } from './callStack'
 import * as callStack from './callStack'
 import handleResponse from './handleResponse'
