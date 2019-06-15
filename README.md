@@ -22,6 +22,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
     * [matchingETagHeaders](#matchingetagheaders-function)
     * [emitRequestType](#emitrequesttype-boolean)
     * [useFullResponseObject](#usefullresponseobject-boolean)
+    * [warnOnCancellation](#warnoncancellation-boolean)
 * [Action properties](#action-properties)
     * [type](#actiontype-string)
     * [types](#actiontypes-array)
@@ -399,6 +400,10 @@ By default `redux-shapeshifter-middleware` actions will upon success return `res
 
 However if you're only interested in some actions returning the full `response` object you could have a look at [`ACTION.payload.useFullResponseObject`](#actionpayloadusefullresponseobject-boolean) to define it per action instead.
 
+#### `warnOnCancellation <boolean>`
+_`default: false`_
+
+By default when cancelling `axios` calls the dependency itself will throw an error with a user-defined reason to why it was canceled. This behavior could be unwanted if let's say you're using an error-catching framework that records and logs all client errors that occurs in production for users. It's not likely that everyone would consider a canceled call "serious" enough to be an error. In this case configuring this option to `true` then only a `console.warn(reason)` will be emitted to the console.
 
 
 

@@ -100,6 +100,7 @@ describe( 'shapeshifter middleware', () => {
       useETags: false,
       emitRequestType: false,
       useFullResponseObject: false,
+      warnOnCancellation: false,
     } )
   } )
 
@@ -146,6 +147,7 @@ describe( 'shapeshifter middleware', () => {
         useETags: false,
         emitRequestType: false,
         useFullResponseObject: false,
+        warnOnCancellation: false,
       }
     )
   } )
@@ -877,21 +879,17 @@ describe( 'shapeshifter middleware', () => {
       )
     } )
 
-    it ( 'Should cancel call if new one is made', () => {
-      const payload  = { data: { name: 'Alejandro', status: 200 } }
-      const resolved = new Promise(r => {
-        setTimeout(() => {
-          r( payload )
-        }, 3000)
-      })
-
-      const resolved2 = new Promise(r => r( payload ))
-
+    it ( 'should cancel call and warn', async () => {
+      setupMiddleware({ warnOnCancellation: true })
+      CancelToken.source.restore()
+      const stub = sandbox.stub( global.console, 'warn' )
+      const payload = { data: { name: 'Alejandro', status: 200 } }
+      const resolved = new Promise(r => setTimeout(() => {
+        r( payload )
+      }, 3000))
       sandbox.stub( axios, 'request' )
-        .onFirstCall().returns( resolved )
-        .onSecondCall().returns( resolved2 )
-      const addToStackSpy = sandbox.spy( callStack, 'addToStack' )
-
+        .onSecondCall().resolves( payload )
+        .callThrough()
 
       const action = {
         ...createApiAction( 'FETCH_USER' ),
@@ -907,15 +905,10 @@ describe( 'shapeshifter middleware', () => {
       }
 
       dispatch( action )
+      await dispatch( actionTwo )
 
-      const firstCall = addToStackSpy.firstCall
-
-      dispatch( actionTwo )
-
-      chai.assert.isTrue(
-        mockCancel.called,
-        'First dispatched Action should have been cancelled.'
-      )
+      chai.assert.calledOnce( stub )
+      chai.assert.calledWith( stub, 'FETCH_USER call was canceled.' )
     } )
 
     it ( 'should return same promise chain', () => {

@@ -28,6 +28,7 @@ const defaultMiddlewareOpts = {
   useETags: false,
   emitRequestType: false,
   useFullResponseObject: false,
+  warnOnCancellation: false,
 }
 
 export let middlewareOpts = {}
@@ -389,7 +390,12 @@ const middleware = (options) => {
         }
 
         dispatch( failure( FAILURE, error ) )
-        throw new Error( error )
+
+        if ( middlewareOpts.warnOnCancellation && axios.isCancel( error ) ) {
+          console.warn( error.message );
+        } else {
+          throw new Error( error )
+        }
       })
 
     // Not sure of its usage atm, but it might be nice to have some where
