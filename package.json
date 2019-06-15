@@ -1,6 +1,6 @@
 {
   "name": "redux-shapeshifter-middleware",
-  "version": "0.14.5",
+  "version": "0.15.0",
   "description": "Redux middleware for empowering your actions using `axios` and `qs` libraries combined.",
   "main": "./lib/middleware.js",
   "files": [
