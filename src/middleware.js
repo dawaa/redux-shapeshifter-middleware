@@ -371,6 +371,7 @@ const middleware = (options) => {
         })
       })
       .catch( error => {
+        const isAxiosError = error && error.isAxiosError || false
         // Remove call from callStack when finished
         removeFromStack( REQUEST )
 
@@ -392,7 +393,7 @@ const middleware = (options) => {
           return
         }
 
-        if ( isShapeshifterError( error ) ) {
+        if ( isAxiosError || isShapeshifterError( error ) ) {
           dispatch( failure( FAILURE, error ) )
         }
 
