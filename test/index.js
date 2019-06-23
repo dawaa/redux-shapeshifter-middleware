@@ -1306,6 +1306,37 @@ describe( 'shapeshifter middleware', () => {
         mock.verify()
       } )
 
+      it ( 'fails on success() with a SyntaxError and logs it', async () => {
+        const mock = sandbox.mock( console ).expects( 'error' ).once()
+        stubApiResponse({
+          data: {
+            user: { name: 'Alejandro' },
+            status: 200
+          }
+        })
+        const successSpy = sandbox.spy()
+        const failureSpy = sandbox.spy()
+        const action = {
+          ...createApiAction( 'FETCH_USER' ),
+          payload: () => ({
+            url: '/users/fetch',
+            success: () => {
+              successSpy()
+              const arr = []
+              arr.o.reduce(() => {})
+            },
+            failure: () => {
+              failureSpy()
+            }
+          })
+        }
+
+        await assert.isFulfilled(dispatch( action ))
+        chai.assert.calledOnce(successSpy)
+        chai.assert.notCalled(failureSpy)
+        mock.verify()
+      } )
+
       it ( 'Params should match using POST', async () => {
         const stub = stubApiResponse({
           method: 'post',
