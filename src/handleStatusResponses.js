@@ -56,16 +56,13 @@ export default store => response => {
    * object to see if we should deal with them.
    */
   if ( typeof handleStatusResponses !== 'function' ) {
-    if ( error !== undefined
-      && error !== null
+    if ( error != null
       && error.constructor === String
       && errors instanceof Array === false ) {
       return Promise.reject( error )
     }
 
-    if (
-      errors !== undefined
-      && errors !== null
+    if ( errors != null
       && errors.constructor === Array
       && errors.length > 0 ) {
       return Promise.reject( errors )
