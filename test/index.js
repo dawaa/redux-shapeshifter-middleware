@@ -2054,7 +2054,7 @@ describe( 'shapeshifter middleware', () => {
       )
       chai.assert.isTrue(
         failureSpy.called,
-        'Success should\'ve been called after two ticks',
+        'Failure should\'ve been called after two ticks',
       )
     } )
 
