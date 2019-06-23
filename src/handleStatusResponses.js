@@ -1,4 +1,8 @@
 import { middlewareOpts } from './middleware'
+import ResponseWithError from './errors/ResponseWithError'
+import ResponseWithErrors from './errors/ResponseWithErrors'
+import ResponseWithBadStatusCode from './errors/ResponseWithBadStatusCode'
+import ResponseNotModified from './errors/ResponseNotModified'
 
 export default store => response => {
   const {
@@ -45,8 +49,10 @@ export default store => response => {
       && customSuccessResponses.constructor === Array
       && customSuccessResponses.indexOf( status ) !== -1 ) {
       // .. code
+    } else if ( status === 304 ) {
+      return Promise.reject( new ResponseNotModified( response ) )
     } else {
-      return Promise.reject( response )
+      return Promise.reject( new ResponseWithBadStatusCode( response ) )
     }
   }
 
@@ -59,13 +65,13 @@ export default store => response => {
     if ( error != null
       && error.constructor === String
       && errors instanceof Array === false ) {
-      return Promise.reject( error )
+      return Promise.reject( new ResponseWithError( error ) )
     }
 
     if ( errors != null
       && errors.constructor === Array
       && errors.length > 0 ) {
-      return Promise.reject( errors )
+      return Promise.reject( new ResponseWithErrors( errors ) )
     }
   }
 }

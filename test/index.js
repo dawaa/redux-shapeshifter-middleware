@@ -20,6 +20,11 @@ import shapeshifter, {
 } from '../src/middleware'
 import * as callStack from '../src/callStack'
 import { MiddlewareOptionsValidationError } from '../src/utils/validateMiddlewareOptions'
+import ResponseWithError from '../src/errors/ResponseWithError'
+import ResponseWithErrors from '../src/errors/ResponseWithErrors'
+import ResponseErrorMessage from '../src/errors/ResponseErrorMessage'
+import ResponseWithBadStatusCode from '../src/errors/ResponseWithBadStatusCode'
+import ResponseRepeatReject from '../src/errors/ResponseRepeatReject'
 
 const { assert } = chai
 
@@ -124,7 +129,7 @@ describe( 'shapeshifter middleware', () => {
       })
     }
 
-    await assert.isRejected(dispatch( action ), 'Something went wrong with the API call')
+    await assert.isRejected(dispatch( action ), new ResponseErrorMessage())
 
     assert.deepEqual(
       middlewareOpts,
@@ -519,14 +524,12 @@ describe( 'shapeshifter middleware', () => {
     urlETags[ '/users/fetch' ] = ETag
 
     const stub = stubApiResponse({
-      response: {
-        data: {},
+      data: {
         status: 304,
         headers: {
           ETag,
         },
       },
-      data: {},
     })
 
     const action = {
@@ -562,14 +565,12 @@ describe( 'shapeshifter middleware', () => {
     urlETags[ '/users/fetch' ] = ETag
 
     const stub = stubApiResponse({
-      response: {
-        data: {},
+      data: {
         status: 304,
         headers: {
           ETag,
         },
       },
-      data: {},
     })
 
     const spy = sandbox.spy()
@@ -620,7 +621,7 @@ describe( 'shapeshifter middleware', () => {
       baseURL: 'http://other.domain',
     };
 
-    await assert.isRejected(dispatch( action ), 'Something went wrong with the API call')
+    await assert.isRejected(dispatch( action ), new ResponseErrorMessage())
 
     assert.deepEqual(stub.args[ 0 ][ 0 ], expected)
   } )
@@ -946,16 +947,12 @@ describe( 'shapeshifter middleware', () => {
         const expectedAction = {
           type: 'API_ERROR',
           message: 'FETCH_USER_FAILED failed.',
-          error: 'Failed to do stuff.'
+          error: sinon.match.instanceOf(ResponseErrorMessage)
         }
 
         await assert.isRejected(dispatch( action ), Error)
         assert.called(store.dispatch)
-        assert.deepEqual(
-          store.dispatch.firstCall.args[ 0 ],
-          expectedAction,
-          'Dispatch should have been called with expectedAction',
-        )
+        assert.calledWith( store.dispatch, expectedAction )
       } )
 
       it ( 'Custom failure() method', async () => {
@@ -981,7 +978,7 @@ describe( 'shapeshifter middleware', () => {
         const expectedAction = {
           type: 'FETCH_USER_FAILED',
           message: 'Failed to fetch a user.',
-          error: 'Failed to do stuff, twice.'
+          error: sinon.match.instanceOf(ResponseErrorMessage)
         }
 
         await assert.isRejected(dispatch( action ), Error)
@@ -1013,12 +1010,10 @@ describe( 'shapeshifter middleware', () => {
           failureSpy.called,
           'Call failure() when receiving prop `error` from back-end'
         )
-        assert.deepEqual(
-          failureSpy.args[ 0 ],
-          [
-            'FETCH_USER_FAILED',
-            'An error occurred in the back-end, oh danglers!'
-          ]
+        assert.calledWith(
+          failureSpy,
+          'FETCH_USER_FAILED',
+          sinon.match.instanceOf(ResponseWithError),
         )
       } )
 
@@ -1042,12 +1037,10 @@ describe( 'shapeshifter middleware', () => {
 
         await assert.isRejected(dispatch( action ), Error)
         assert.isTrue( failureSpy.called, 'Should call failure()' )
-        assert.deepEqual(
-          failureSpy.args[ 0 ],
-          [
-            'FETCH_USER_FAILED',
-            [ 'Reject this one baby', 'Another error' ],
-          ]
+        assert.calledWith(
+          failureSpy,
+          'FETCH_USER_FAILED',
+          sinon.match.instanceOf(ResponseWithErrors),
         )
       } )
 
@@ -1059,7 +1052,7 @@ describe( 'shapeshifter middleware', () => {
           handleStatusResponses(response, store) {
             if ( response.data && response.data.errors ) {
               rejectSpy()
-              return Promise.reject( response.data.errors )
+              return Promise.reject( new ResponseErrorMessage( response.data.errors ) )
             }
 
             resolveSpy()
@@ -1085,7 +1078,7 @@ describe( 'shapeshifter middleware', () => {
           })
         }
 
-        await assert.isRejected(dispatch( action ), Error)
+        await assert.isRejected(dispatch( action ), new ResponseErrorMessage())
         assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
         assert.isTrue( rejectSpy.called, 'Should return Promise.reject.' )
         assert.isFalse( resolveSpy.called, 'Should not return Promise.resolve.' )
@@ -1098,12 +1091,10 @@ describe( 'shapeshifter middleware', () => {
           failureSpy.calledOnce,
           'failure() method of Action should have been called.'
         )
-        assert.deepEqual(
-          failureSpy.firstCall.args,
-          [
-            'FETCH_USER_FAILED',
-            [ 'Reject this one baby', 'Another error' ]
-          ]
+        assert.calledWith(
+          failureSpy,
+          'FETCH_USER_FAILED',
+          sinon.match.instanceOf( ResponseErrorMessage ),
         )
       } )
 
@@ -1283,12 +1274,7 @@ describe( 'shapeshifter middleware', () => {
         const expectedAction = {
           type    : 'API_ERROR',
           message : 'FETCH_USER_FAILED failed.',
-          error   : {
-            data : {
-              errors : [ 'Error authorizing or something' ],
-              status : 401,
-            },
-          },
+          error   : sinon.match.instanceOf(ResponseWithBadStatusCode),
         }
 
         await assert.isRejected(dispatch( action ), Error)
@@ -2150,11 +2136,10 @@ describe( 'shapeshifter middleware', () => {
         2,
         'Should tick twice before isOnline is true',
       )
-      chai.assert.isTrue(
-        failureSpy.calledWith(
-          'FETCH_USER_FAILED',
-          { buhu: true },
-        )
+      chai.assert.calledWith(
+        failureSpy,
+        'FETCH_USER_FAILED',
+        sinon.match.instanceOf( ResponseRepeatReject ),
       )
     } )
   } )
