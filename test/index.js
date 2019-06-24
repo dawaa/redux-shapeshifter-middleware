@@ -20,6 +20,11 @@ import shapeshifter, {
 } from '../src/middleware'
 import * as callStack from '../src/callStack'
 import { MiddlewareOptionsValidationError } from '../src/utils/validateMiddlewareOptions'
+import ResponseWithError from '../src/errors/ResponseWithError'
+import ResponseWithErrors from '../src/errors/ResponseWithErrors'
+import ResponseErrorMessage from '../src/errors/ResponseErrorMessage'
+import ResponseWithBadStatusCode from '../src/errors/ResponseWithBadStatusCode'
+import ResponseRepeatReject from '../src/errors/ResponseRepeatReject'
 
 const { assert } = chai
 
@@ -105,6 +110,7 @@ describe( 'shapeshifter middleware', () => {
   } )
 
   it ( 'Should set headers within `auth` prop and successfully replace values with store values', async () => {
+    const mock = sandbox.mock( console ).expects( 'error' ).once()
     stubApiResponse({})
     setupMiddleware({
       base : 'http://some.api/v1',
@@ -124,7 +130,7 @@ describe( 'shapeshifter middleware', () => {
       })
     }
 
-    await assert.isRejected(dispatch( action ), 'Something went wrong with the API call')
+    await assert.isFulfilled(dispatch( action ))
 
     assert.deepEqual(
       middlewareOpts,
@@ -150,6 +156,7 @@ describe( 'shapeshifter middleware', () => {
         warnOnCancellation: false,
       }
     )
+    mock.verify()
   } )
 
   it ( 'should ignore other rules if `useOnlyAxiosStatusResponse` is set to true', async () => {
@@ -519,14 +526,12 @@ describe( 'shapeshifter middleware', () => {
     urlETags[ '/users/fetch' ] = ETag
 
     const stub = stubApiResponse({
-      response: {
-        data: {},
+      data: {
         status: 304,
         headers: {
           ETag,
         },
       },
-      data: {},
     })
 
     const action = {
@@ -562,14 +567,12 @@ describe( 'shapeshifter middleware', () => {
     urlETags[ '/users/fetch' ] = ETag
 
     const stub = stubApiResponse({
-      response: {
-        data: {},
+      data: {
         status: 304,
         headers: {
           ETag,
         },
       },
-      data: {},
     })
 
     const spy = sandbox.spy()
@@ -602,6 +605,7 @@ describe( 'shapeshifter middleware', () => {
   } )
 
   it ( 'should override base url in action if done through the axios config object', async () => {
+    const mock = sandbox.mock( console ).expects( 'error' ).once()
     const stub = stubApiResponse({})
     const action = {
       ...createApiAction( 'FETCH_USER' ),
@@ -620,9 +624,10 @@ describe( 'shapeshifter middleware', () => {
       baseURL: 'http://other.domain',
     };
 
-    await assert.isRejected(dispatch( action ), 'Something went wrong with the API call')
+    await assert.isFulfilled(dispatch( action ))
 
     assert.deepEqual(stub.args[ 0 ][ 0 ], expected)
+    mock.verify()
   } )
 
   it ( 'should return next(action) if not a valid shapeshifter action', () => {
@@ -647,6 +652,7 @@ describe( 'shapeshifter middleware', () => {
   } )
 
   it ( 'should call action.payload() method with dispatch and state', async () => {
+    const mock = sandbox.mock( console ).expects( 'error' ).once()
     const payloadSpy = sinon.spy()
     const action = {
       type: 'API',
@@ -664,7 +670,7 @@ describe( 'shapeshifter middleware', () => {
       }
     }
 
-    await assert.isRejected(dispatch( action ), Error)
+    await assert.isFulfilled(dispatch( action ))
 
     chai.assert.isTrue( payloadSpy.called )
     chai.assert.calledWith(payloadSpy, {
@@ -672,6 +678,7 @@ describe( 'shapeshifter middleware', () => {
       state:    store.getState(),
       cancel:   mockCancel,
     })
+    mock.verify()
   } )
 
   it ( 'should throw an error if payload property doesn\'t return an object', () => {
@@ -934,6 +941,7 @@ describe( 'shapeshifter middleware', () => {
 
     describe( 'Failed API calls', () => {
       it ( 'Let fallback failure() method capture it', async () => {
+        const mock = sandbox.mock( console ).expects( 'error' ).once()
         stubApiResponse({ data: 'Failed to do stuff.' })
 
         const action = {
@@ -946,19 +954,17 @@ describe( 'shapeshifter middleware', () => {
         const expectedAction = {
           type: 'API_ERROR',
           message: 'FETCH_USER_FAILED failed.',
-          error: 'Failed to do stuff.'
+          error: sinon.match.instanceOf(ResponseErrorMessage)
         }
 
-        await assert.isRejected(dispatch( action ), Error)
+        await assert.isFulfilled(dispatch( action ))
         assert.called(store.dispatch)
-        assert.deepEqual(
-          store.dispatch.firstCall.args[ 0 ],
-          expectedAction,
-          'Dispatch should have been called with expectedAction',
-        )
+        assert.calledWith( store.dispatch, expectedAction )
+        mock.verify()
       } )
 
       it ( 'Custom failure() method', async () => {
+        const mock = sandbox.mock( console ).expects( 'error' ).once()
         stubApiResponse({ data: 'Failed to do stuff, twice.' })
 
         const action = {
@@ -981,17 +987,19 @@ describe( 'shapeshifter middleware', () => {
         const expectedAction = {
           type: 'FETCH_USER_FAILED',
           message: 'Failed to fetch a user.',
-          error: 'Failed to do stuff, twice.'
+          error: sinon.match.instanceOf(ResponseErrorMessage)
         }
 
-        await assert.isRejected(dispatch( action ), Error)
+        await assert.isFulfilled(dispatch( action ))
         assert.isTrue( store.dispatch.called )
         assert.isTrue( store.dispatch.calledWith( expectedAction ) )
+        mock.verify()
       } )
     } )
 
     describe( 'Successful API calls, returning errors', () => {
       it ( 'Should reject with prop `error`', async () => {
+        const mock = sandbox.mock( console ).expects( 'error' ).once()
         stubApiResponse({
           data: {
             error: 'An error occurred in the back-end, oh danglers!',
@@ -1008,21 +1016,21 @@ describe( 'shapeshifter middleware', () => {
           })
         }
 
-        await assert.isRejected(dispatch( action ), Error)
+        await assert.isFulfilled(dispatch( action ))
         assert.isTrue(
           failureSpy.called,
           'Call failure() when receiving prop `error` from back-end'
         )
-        assert.deepEqual(
-          failureSpy.args[ 0 ],
-          [
-            'FETCH_USER_FAILED',
-            'An error occurred in the back-end, oh danglers!'
-          ]
+        assert.calledWith(
+          failureSpy,
+          'FETCH_USER_FAILED',
+          sinon.match.instanceOf(ResponseWithError),
         )
+        mock.verify()
       } )
 
       it ( 'Should reject with prop `errors` (array)', async () => {
+        const mock = sandbox.mock( console ).expects( 'error' ).once()
         stubApiResponse({
           data: {
             errors: [ 'Reject this one baby', 'Another error' ],
@@ -1040,18 +1048,18 @@ describe( 'shapeshifter middleware', () => {
           })
         }
 
-        await assert.isRejected(dispatch( action ), Error)
+        await assert.isFulfilled(dispatch( action ))
         assert.isTrue( failureSpy.called, 'Should call failure()' )
-        assert.deepEqual(
-          failureSpy.args[ 0 ],
-          [
-            'FETCH_USER_FAILED',
-            [ 'Reject this one baby', 'Another error' ],
-          ]
+        assert.calledWith(
+          failureSpy,
+          'FETCH_USER_FAILED',
+          sinon.match.instanceOf(ResponseWithErrors),
         )
+        mock.verify()
       } )
 
       it ( 'Should using custom status response handler reject', async () => {
+        const mock = sandbox.mock( console ).expects( 'error' ).once()
         const rejectSpy  = sandbox.spy()
         const resolveSpy = sandbox.spy()
         setupMiddleware({
@@ -1059,7 +1067,7 @@ describe( 'shapeshifter middleware', () => {
           handleStatusResponses(response, store) {
             if ( response.data && response.data.errors ) {
               rejectSpy()
-              return Promise.reject( response.data.errors )
+              return Promise.reject( new ResponseErrorMessage( response.data.errors ) )
             }
 
             resolveSpy()
@@ -1085,7 +1093,7 @@ describe( 'shapeshifter middleware', () => {
           })
         }
 
-        await assert.isRejected(dispatch( action ), Error)
+        await assert.isFulfilled(dispatch( action ))
         assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
         assert.isTrue( rejectSpy.called, 'Should return Promise.reject.' )
         assert.isFalse( resolveSpy.called, 'Should not return Promise.resolve.' )
@@ -1098,13 +1106,12 @@ describe( 'shapeshifter middleware', () => {
           failureSpy.calledOnce,
           'failure() method of Action should have been called.'
         )
-        assert.deepEqual(
-          failureSpy.firstCall.args,
-          [
-            'FETCH_USER_FAILED',
-            [ 'Reject this one baby', 'Another error' ]
-          ]
+        assert.calledWith(
+          failureSpy,
+          'FETCH_USER_FAILED',
+          sinon.match.instanceOf( ResponseErrorMessage ),
         )
+        mock.verify()
       } )
 
       it ( 'should using custom status response handler resolve', async () => {
@@ -1257,6 +1264,7 @@ describe( 'shapeshifter middleware', () => {
 
     describe( 'Successful API calls', () => {
       it ( 'Successful API call but wrong status code', async () => {
+        const mock = sandbox.mock( console ).expects( 'error' ).once()
         stubApiResponse({
           data: {
             errors: [ 'Error authorizing or something' ],
@@ -1283,15 +1291,10 @@ describe( 'shapeshifter middleware', () => {
         const expectedAction = {
           type    : 'API_ERROR',
           message : 'FETCH_USER_FAILED failed.',
-          error   : {
-            data : {
-              errors : [ 'Error authorizing or something' ],
-              status : 401,
-            },
-          },
+          error   : sinon.match.instanceOf(ResponseWithBadStatusCode),
         }
 
-        await assert.isRejected(dispatch( action ), Error)
+        await assert.isFulfilled(dispatch( action ))
         chai.assert.isTrue(
           store.dispatch.called,
           'store.dispatch() should have been called.'
@@ -1300,6 +1303,66 @@ describe( 'shapeshifter middleware', () => {
           store.dispatch.calledWith( expectedAction ),
           'store.dispatch() should have been called with expectedAction.'
         )
+        mock.verify()
+      } )
+
+      it ( 'returns not modified response and doesn\'t log an error', async () => {
+        const mock = sandbox.mock( console ).expects( 'error' ).never()
+        sandbox.stub( axios, 'request' ).rejects({
+          isAxiosError: true,
+          response: {
+            data: '',
+            status: 304,
+            statusText: 'Not Modified',
+          },
+          message: 'Request failed with status code 304',
+          stack: `Error: Request failed with status code 304
+    at createError (http://localhost:3001/static/js/bundle.js:8323:15)
+    at settle (http://localhost:3001/static/js/bundle.js:8569:12)
+    at XMLHttpRequest.handleLoad (http://localhost:3001/static/js/bundle.js:7836:7)`,
+        })
+
+        const action = {
+          ...createApiAction( 'FETCH_USER' ),
+          payload: () => ({
+            url: '/users/fetch',
+          })
+        }
+
+        await assert.isFulfilled(dispatch( action ))
+        chai.assert.notCalled(store.dispatch)
+        mock.verify()
+      } )
+
+      it ( 'fails on success() with a SyntaxError and logs it', async () => {
+        const mock = sandbox.mock( console ).expects( 'error' ).once()
+        stubApiResponse({
+          data: {
+            user: { name: 'Alejandro' },
+            status: 200
+          }
+        })
+        const successSpy = sandbox.spy()
+        const failureSpy = sandbox.spy()
+        const action = {
+          ...createApiAction( 'FETCH_USER' ),
+          payload: () => ({
+            url: '/users/fetch',
+            success: () => {
+              successSpy()
+              const arr = []
+              arr.o.reduce(() => {})
+            },
+            failure: () => {
+              failureSpy()
+            }
+          })
+        }
+
+        await assert.isFulfilled(dispatch( action ))
+        chai.assert.calledOnce(successSpy)
+        chai.assert.notCalled(failureSpy)
+        mock.verify()
       } )
 
       it ( 'Params should match using POST', async () => {
@@ -2037,6 +2100,7 @@ describe( 'shapeshifter middleware', () => {
     } )
 
     it ( 'should repeatedly call an endpoint and reject on boolean (false)', async () => {
+      const mock = sandbox.mock( console ).expects( 'error' ).once()
       sandbox.stub( axios, 'request' )
         .onCall( 0 ).resolves({ status: 200, data: { isOnline: true } })
         .onCall( 1 ).resolves({ status: 200, data: { isOnline: true } })
@@ -2060,7 +2124,7 @@ describe( 'shapeshifter middleware', () => {
         })
       }
 
-      await assert.isRejected(dispatch( action ), Error)
+      await assert.isFulfilled(dispatch( action ))
       chai.assert.strictEqual(
         tickSpy.callCount,
         2,
@@ -2068,8 +2132,9 @@ describe( 'shapeshifter middleware', () => {
       )
       chai.assert.isTrue(
         failureSpy.called,
-        'Success should\'ve been called after two ticks',
+        'Failure should\'ve been called after two ticks',
       )
+      mock.verify()
     } )
 
     it ( 'should repeatedly call an endpoint and resolve with custom data', async () => {
@@ -2121,6 +2186,7 @@ describe( 'shapeshifter middleware', () => {
     } )
 
     it ( 'should repeatedly call an endpoint and reject with custom data', async () => {
+      const mock = sandbox.mock( console ).expects( 'error' ).once()
       sandbox.stub( axios, 'request' )
         .onCall( 0 ).resolves({ status: 200, data: { isOnline: true } })
         .onCall( 1 ).resolves({ status: 200, data: { isOnline: true } })
@@ -2144,18 +2210,18 @@ describe( 'shapeshifter middleware', () => {
         })
       }
 
-      await assert.isRejected(dispatch( action ), Error)
+      await assert.isFulfilled(dispatch( action ))
       chai.assert.strictEqual(
         tickSpy.callCount,
         2,
         'Should tick twice before isOnline is true',
       )
-      chai.assert.isTrue(
-        failureSpy.calledWith(
-          'FETCH_USER_FAILED',
-          { buhu: true },
-        )
+      chai.assert.calledWith(
+        failureSpy,
+        'FETCH_USER_FAILED',
+        sinon.match.instanceOf( ResponseRepeatReject ),
       )
+      mock.verify()
     } )
   } )
 

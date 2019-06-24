@@ -3,6 +3,7 @@ import { isGeneratorFn }     from './generator'
 import { middlewareOpts }    from './middleware'
 import handleStatusResponses from './handleStatusResponses'
 import handleGeneratorFn     from './handleGeneratorFn'
+import ResponseErrorMessage  from './errors/ResponseErrorMessage'
 
 function validateResponse(response) {
   if ( typeof response.data !== 'object' ) {
@@ -27,7 +28,7 @@ export default store => next => response => async ({
   const validatedResponse = validateResponse( response )
 
   if ( validatedResponse ) {
-    return Promise.reject( validatedResponse )
+    return Promise.reject( new ResponseErrorMessage( validatedResponse ) )
   }
   const { REQUEST, SUCCESS, FAILURE } = types
 

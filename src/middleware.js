@@ -13,6 +13,9 @@ import * as callStack from './callStack'
 import handleResponse from './handleResponse'
 import validateAction from './utils/validateAction'
 import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
+import ResponseNotModified from './errors/ResponseNotModified'
+import ResponseRepeatReject from './errors/ResponseRepeatReject'
+import isShapeshifterError from './utils/isShapeshifterError'
 
 const defaultMiddlewareOpts = {
   base: '',
@@ -330,7 +333,7 @@ const middleware = (options) => {
             return data
           }
           const rejectRepeater = data => {
-            parentReject( data )
+            parentReject( new ResponseRepeatReject( data ) )
             return data
           }
 
@@ -367,11 +370,24 @@ const middleware = (options) => {
           return repeater()
         })
       })
-      .catch( error => {
+      .catch( function shapeshifterRequestCatch(error) {
+        const isAxiosError = error && error.isAxiosError || false
+
+        if ( isAxiosError ) {
+          const isNotModifiedResponse = error.response
+            && error.response.status === 304
+
+          if ( isNotModifiedResponse ) {
+            const stack = error.stack
+            error = new ResponseNotModified( error.message )
+            error.stack = stack
+          }
+        }
+
         // Remove call from callStack when finished
         removeFromStack( REQUEST )
 
-        if ( error && error.response && error.response.status === 304 ) {
+        if ( error instanceof ResponseNotModified ) {
           const cb = ETagCallback
 
           if ( cb.constructor === Object ) {
@@ -389,12 +405,14 @@ const middleware = (options) => {
           return
         }
 
-        dispatch( failure( FAILURE, error ) )
+        if ( isAxiosError || isShapeshifterError( error ) ) {
+          dispatch( failure( FAILURE, error ) )
+        }
 
         if ( middlewareOpts.warnOnCancellation && axios.isCancel( error ) ) {
           console.warn( error.message );
         } else {
-          throw new Error( error )
+          console.error( error )
         }
       })
 
