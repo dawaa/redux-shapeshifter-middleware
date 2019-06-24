@@ -370,7 +370,7 @@ const middleware = (options) => {
           return repeater()
         })
       })
-      .catch( error => {
+      .catch( function shapeshifterRequestCatch(error) {
         const isAxiosError = error && error.isAxiosError || false
         // Remove call from callStack when finished
         removeFromStack( REQUEST )
