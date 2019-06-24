@@ -372,6 +372,18 @@ const middleware = (options) => {
       })
       .catch( function shapeshifterRequestCatch(error) {
         const isAxiosError = error && error.isAxiosError || false
+
+        if ( isAxiosError ) {
+          const isNotModifiedResponse = error.response
+            && error.response.status === 304
+
+          if ( isNotModifiedResponse ) {
+            const stack = error.stack
+            error = new ResponseNotModified( error.message )
+            error.stack = stack
+          }
+        }
+
         // Remove call from callStack when finished
         removeFromStack( REQUEST )
 

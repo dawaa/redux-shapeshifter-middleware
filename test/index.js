@@ -1306,6 +1306,34 @@ describe( 'shapeshifter middleware', () => {
         mock.verify()
       } )
 
+      it ( 'returns not modified response and doesn\'t log an error', async () => {
+        const mock = sandbox.mock( console ).expects( 'error' ).never()
+        sandbox.stub( axios, 'request' ).rejects({
+          isAxiosError: true,
+          response: {
+            data: '',
+            status: 304,
+            statusText: 'Not Modified',
+          },
+          message: 'Request failed with status code 304',
+          stack: `Error: Request failed with status code 304
+    at createError (http://localhost:3001/static/js/bundle.js:8323:15)
+    at settle (http://localhost:3001/static/js/bundle.js:8569:12)
+    at XMLHttpRequest.handleLoad (http://localhost:3001/static/js/bundle.js:7836:7)`,
+        })
+
+        const action = {
+          ...createApiAction( 'FETCH_USER' ),
+          payload: () => ({
+            url: '/users/fetch',
+          })
+        }
+
+        await assert.isFulfilled(dispatch( action ))
+        chai.assert.notCalled(store.dispatch)
+        mock.verify()
+      } )
+
       it ( 'fails on success() with a SyntaxError and logs it', async () => {
         const mock = sandbox.mock( console ).expects( 'error' ).once()
         stubApiResponse({
