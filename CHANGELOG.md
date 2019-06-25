@@ -3,6 +3,10 @@
 ## [Unreleased]
 Future stuff...
 
+## [1.0.1] - 2019-06-25
+### Changed
+- Only `console.error` the message of a canceled call to avoid double-arrows in the console
+
 ## [1.0.0] - 2019-06-24
 ### Added
 - This `CHANGELOG.md`
@@ -25,5 +29,6 @@ Future stuff...
 - Swallowing errors. Added test case that checks if e.g. a `SyntaxError` after `success()` has been called and logs the error. At the same time we shouldn't call `failure()` neither call `dispatch()` in the `.catch()`-handler
 - Added test case that ensures if response is `304` ("Not Modified") that we won't call `dispatch()` and that we won't log it as an error
 
-[Unreleased]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.0.0...head
+[Unreleased]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.0.1...head
+[1.0.1]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v0.15.0...v1.0.0

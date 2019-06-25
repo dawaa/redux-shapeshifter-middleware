@@ -412,7 +412,7 @@ const middleware = (options) => {
         if ( middlewareOpts.warnOnCancellation && axios.isCancel( error ) ) {
           console.warn( error.message );
         } else {
-          console.error( error )
+          console.error( axios.isCancel( error ) ? error.message : error )
         }
       })
 
