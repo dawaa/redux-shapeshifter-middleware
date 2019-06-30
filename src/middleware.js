@@ -15,6 +15,7 @@ import validateAction from './utils/validateAction'
 import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
 import ResponseNotModified from './errors/ResponseNotModified'
 import ResponseRepeatReject from './errors/ResponseRepeatReject'
+import MiddlewareOptionsValidationError from './errors/MiddlewareOptionsValidationError'
 import isShapeshifterError from './utils/isShapeshifterError'
 
 const defaultMiddlewareOpts = {
@@ -42,6 +43,10 @@ const middleware = (options) => {
     ...defaultMiddlewareOpts,
     ...options,
   })
+
+  if (middlewareOpts instanceof MiddlewareOptionsValidationError) {
+    throw middlewareOpts;
+  }
 
   // Clear trailing slash
   middlewareOpts.base = middlewareOpts.base.replace( /\/$/, '' )
