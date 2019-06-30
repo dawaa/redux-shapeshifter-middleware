@@ -15,6 +15,9 @@ import validateAction from './utils/validateAction'
 import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
 import ResponseNotModified from './errors/ResponseNotModified'
 import ResponseRepeatReject from './errors/ResponseRepeatReject'
+import NotShapeshifterAction from './errors/NotShapeshifterAction'
+import MalformedShapeshifterAction from './errors/MalformedShapeshifterAction'
+import MiddlewareOptionsValidationError from './errors/MiddlewareOptionsValidationError'
 import isShapeshifterError from './utils/isShapeshifterError'
 
 const defaultMiddlewareOpts = {
@@ -43,6 +46,10 @@ const middleware = (options) => {
     ...options,
   })
 
+  if (middlewareOpts instanceof MiddlewareOptionsValidationError) {
+    throw middlewareOpts;
+  }
+
   // Clear trailing slash
   middlewareOpts.base = middlewareOpts.base.replace( /\/$/, '' )
 
@@ -57,15 +64,15 @@ const middleware = (options) => {
       constants,
     } = middlewareOpts;
 
-    const isValidAction = validateAction( constants.API )( next )( action )
+    const isValidAction = validateAction( constants.API )( action )
 
-    if ( isValidAction && isValidAction.constructor === String ) {
+    if ( isValidAction instanceof NotShapeshifterAction ) {
+      return next( action )
+    } else if ( isValidAction instanceof MalformedShapeshifterAction ) {
       process.env.NODE_ENV !== 'test' && action && console.error(
         `redux-shapeshifter-middleware: ${ isValidAction } ` +
         `=> ${JSON.stringify( action )}`
       )
-      return next( action )
-    } else if ( ! isValidAction ) {
       return next( action )
     }
 

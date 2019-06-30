@@ -19,7 +19,7 @@ import shapeshifter, {
   urlETags,
 } from '../src/middleware'
 import * as callStack from '../src/callStack'
-import { MiddlewareOptionsValidationError } from '../src/utils/validateMiddlewareOptions'
+import MiddlewareOptionsValidationError from '../src/errors/MiddlewareOptionsValidationError'
 import ResponseWithError from '../src/errors/ResponseWithError'
 import ResponseWithErrors from '../src/errors/ResponseWithErrors'
 import ResponseErrorMessage from '../src/errors/ResponseErrorMessage'
@@ -705,31 +705,10 @@ describe( 'shapeshifter middleware', () => {
     ).to.throw( Error, `action.payload.useFullResponseObject is expected to be of type Boolean, got instead crash-test` )
   } )
 
-  it ( 'should throw if `middleware.useFullResponseObject` is not of type Boolean', () => {
-    chai.expect(
-      () => setupMiddleware({
-        base                  : 'http://some.api/v1',
-        useFullResponseObject : 'crash-me',
-      })
-    ).to.throw( Error, `middleware.useFullResponseObject is expected to be of type Boolean, got instead crash-me` )
-  } )
-
   it ( 'should throw when middleware config contain errors', () => {
     chai.expect(
       () => setupMiddleware({ constants : null })
-    ).to.throw( MiddlewareOptionsValidationError )
-  } )
-
-  it ( 'should throw when middleware config contains multiple errors', () => {
-    chai.expect(
-      () => setupMiddleware({
-        base: { url: 'wrong-way' },
-        constants : null,
-      })
-    ).to.throw(
-      MiddlewareOptionsValidationError,
-      /middleware\.\w+[\s\S]*middleware\.\w+/,
-    )
+    ).to.throw().an.instanceof( MiddlewareOptionsValidationError )
   } )
 
   it ( 'should not return full response object when middleware.useFullResponseObject = false', async () => {
