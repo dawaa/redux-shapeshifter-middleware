@@ -13,11 +13,13 @@ import * as callStack from './callStack'
 import handleResponse from './handleResponse'
 import validateAction from './utils/validateAction'
 import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
+import defineRequestBodyPayload from './utils/defineRequestBodyPayload'
 import ResponseNotModified from './errors/ResponseNotModified'
 import ResponseRepeatReject from './errors/ResponseRepeatReject'
 import NotShapeshifterAction from './errors/NotShapeshifterAction'
 import MalformedShapeshifterAction from './errors/MalformedShapeshifterAction'
 import MiddlewareOptionsValidationError from './errors/MiddlewareOptionsValidationError'
+import InvalidMethodError from './errors/InvalidMethodError'
 import isShapeshifterError from './utils/isShapeshifterError'
 
 const defaultMiddlewareOpts = {
@@ -223,15 +225,11 @@ const middleware = (options) => {
       meta.params = Object.assign( {}, parameters )
     }
 
-    // Deal with how to set the body of our request, handling 'delete'
-    // as a special case
-    const params = [ 'post', 'put', 'patch' ].includes( method )
-      ? parameters
-      : (
-        method === 'delete'
-          ? { data: parameters }
-          : { params: parameters }
-      )
+    const params = defineRequestBodyPayload( method, parameters )
+
+    if ( params instanceof InvalidMethodError ) {
+      throw params
+    }
 
     const config = Object.assign(
       {},
@@ -254,26 +252,7 @@ const middleware = (options) => {
     const url = baseURL + uris
 
     let _call
-    let requestConfig = {
-      url,
-      method,
-    }
-
-    // Check if method can contain data and a config
-    if ( [ 'post', 'put', 'patch' ].indexOf( method.toLowerCase() ) !== -1 ) {
-      requestConfig = {
-        ...requestConfig,
-        data: params,
-        ...config,
-      }
-
-    } else {
-      requestConfig = {
-        ...requestConfig,
-        ...params,
-        ...config,
-      }
-    }
+    const requestConfig = { url, method, ...params, ...config }
 
     const _store = { dispatch, state: getState(), getState }
     const processResponse = handleResponse( _store )( next )
