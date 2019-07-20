@@ -11,6 +11,7 @@ import {
 } from './callStack'
 import * as callStack from './callStack'
 import handleResponse from './handleResponse'
+import handleETag from './handleETag'
 import validateAction from './utils/validateAction'
 import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
 import defineRequestBodyPayload from './utils/defineRequestBodyPayload'
@@ -264,33 +265,13 @@ const middleware = (options) => {
         removeFromStack( REQUEST )
         return response
       })
-      .then((response) => {
-        const { headers } = response
-        const normalizedHeaders = {}
-
-        if ( headers == null ) {
-          return response
-        }
-
-        Object.keys( headers ).forEach( headerKey => {
-          const header = headers[ headerKey ]
-          normalizedHeaders[ headerKey.toLowerCase() ] = header
-        } )
-
-        if ( middlewareOpts.useETags && normalizedHeaders.etag ) {
-          urlETags[ uris ] = normalizedHeaders.etag
-
-          if ( middlewareOpts.dispatchETagCreationType ) {
-            dispatch({
-              type: middlewareOpts.dispatchETagCreationType,
-              ETag: normalizedHeaders.etag,
-              key: uris,
-            })
-          }
-        }
-
-        return response
-      })
+      .then(handleETag({
+        dispatch,
+        ETags: urlETags,
+        path: uris,
+        dispatchETagCreationType: middlewareOpts.dispatchETagCreationType,
+        useETags: middlewareOpts.useETags,
+      }))
       .then(response =>
         processResponse( response )({
           success,
