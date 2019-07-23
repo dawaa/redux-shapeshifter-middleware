@@ -4,7 +4,7 @@ import axios, { CancelToken } from 'axios'
 // internal
 import recursiveObjFind             from './recursiveObjFind'
 import { isGeneratorFn }            from './generator'
-import { API, API_ERROR, API_VOID } from './consts'
+import defaultMiddlewareOptions from './defaults'
 import {
   removeFromStack,
   existsInStack,
@@ -23,29 +23,14 @@ import MiddlewareOptionsValidationError from './errors/MiddlewareOptionsValidati
 import InvalidMethodError from './errors/InvalidMethodError'
 import isShapeshifterError from './utils/isShapeshifterError'
 
-const defaultMiddlewareOpts = {
-  base: '',
-  constants: {
-    API,
-    API_ERROR,
-    API_VOID
-  },
-  handleStatusResponses: null,
-  fallbackToAxiosStatusResponse: true,
-  customSuccessResponses: null,
-  useOnlyAxiosStatusResponse: false,
-  useETags: false,
-  emitRequestType: false,
-  useFullResponseObject: false,
-  warnOnCancellation: false,
+export let middlewareOpts = {
+  ...defaultMiddlewareOptions,
 }
-
-export let middlewareOpts = {}
 export const urlETags = {}
 
 const middleware = (options) => {
   middlewareOpts = validateMiddlewareOptions({
-    ...defaultMiddlewareOpts,
+    ...defaultMiddlewareOptions,
     ...options,
   })
 
