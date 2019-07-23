@@ -242,7 +242,6 @@ const middleware = (options) => {
     const requestConfig = { url, method, ...params, ...config }
 
     const _store = { dispatch, state: getState(), getState }
-    const processResponse = handleResponse( _store )( next )
 
     _call = axios.request( requestConfig )
 
@@ -265,16 +264,16 @@ const middleware = (options) => {
         dispatchETagCreationType: middlewareOpts.dispatchETagCreationType,
         useETags: middlewareOpts.useETags,
       }))
-      .then(response =>
-        processResponse( response )({
-          success,
-          failure,
-          types: { REQUEST, SUCCESS, FAILURE },
-          meta,
-          repeat,
-          useFullResponseObject,
-        })
-      )
+      .then(handleResponse({
+        store: _store,
+        next,
+        success,
+        failure,
+        types: { REQUEST, SUCCESS, FAILURE },
+        meta,
+        repeat,
+        useFullResponseObject,
+      }))
       .then(response => {
         if ( !response || !response._shapeShifterRepeat ) return response
 

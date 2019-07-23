@@ -3,6 +3,7 @@ import { isGeneratorFn }     from './generator'
 import { middlewareOpts }    from './middleware'
 import handleGeneratorFn     from './handleGeneratorFn'
 import ResponseErrorMessage  from './errors/ResponseErrorMessage'
+import defined from './utils/defined'
 
 function validateResponse(response) {
   if ( typeof response.data !== 'object' ) {
@@ -16,33 +17,40 @@ function validateResponse(response) {
   return null
 }
 
-export default store => next => response => async ({
-  success,
-  failure,
-  types,
-  meta,
-  repeat,
-  useFullResponseObject,
-}) => {
-  const validatedResponse = validateResponse( response )
+export default (context = {}) => response => {
+  const {
+    store,
+    next,
+    success,
+    failure,
+    types,
+    meta,
+    repeat,
+    useFullResponseObject,
+    fallbackToAxiosStatusResponse,
+    useOnlyAxiosStatusResponse,
+    handleStatusResponses,
+    customSuccessResponses,
+  } = context;
 
-  if ( validatedResponse ) {
-    return Promise.reject( new ResponseErrorMessage( validatedResponse ) )
+  const validatedResponse = validateResponse(response);
+
+  if (validatedResponse) {
+    throw new ResponseErrorMessage(validatedResponse);
   }
-  const { REQUEST, SUCCESS, FAILURE } = types
 
-  const { data, headers = {} } = response
-  const { errors, error }      = data
+  const { REQUEST, SUCCESS, FAILURE } = types;
 
+  const { data, headers = {} } = response;
+  const { errors, error } = data;
 
-  if ( isGeneratorFn( success ) ) {
-    return handleGeneratorFn( store )( next )( response )({ success, types, meta })
+  if (isGeneratorFn(success)) {
+    return handleGeneratorFn(store)(next)(response)({ success, types, meta });
   }
 
-  // Remove call from callStack when finished
-  removeFromStack( REQUEST )
+  removeFromStack(REQUEST);
 
-  if ( repeat && repeat.constructor === Function ) {
+  if (defined(repeat, Function)) {
     response._shapeShifterRepeat = true
   } else {
     store.dispatch(
@@ -59,5 +67,5 @@ export default store => next => response => async ({
     )
   }
 
-  return response
+  return response;
 }
