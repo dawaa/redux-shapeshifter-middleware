@@ -12,6 +12,7 @@ import {
 import * as callStack from './callStack'
 import handleResponse from './handleResponse'
 import handleETag from './handleETag'
+import handleResponseStatus from './handleStatusResponses'
 import validateAction from './utils/validateAction'
 import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
 import defineRequestBodyPayload from './utils/defineRequestBodyPayload'
@@ -250,6 +251,13 @@ const middleware = (options) => {
         removeFromStack( REQUEST )
         return response
       })
+      .then(handleResponseStatus({
+        store: _store,
+        fallbackToAxiosStatusResponse: middlewareOpts.fallbackToAxiosStatusResponse,
+        useOnlyAxiosStatusResponse: middlewareOpts.useOnlyAxiosStatusResponse,
+        handleStatusResponses: middlewareOpts.handleStatusResponses,
+        customSuccessResponses: middlewareOpts.customSuccessResponses,
+      }))
       .then(handleETag({
         dispatch,
         ETags: urlETags,

@@ -1,24 +1,42 @@
 import { middlewareOpts } from './middleware'
+import defined from './utils/defined'
 import ResponseWithError from './errors/ResponseWithError'
 import ResponseWithErrors from './errors/ResponseWithErrors'
 import ResponseWithBadStatusCode from './errors/ResponseWithBadStatusCode'
 import ResponseNotModified from './errors/ResponseNotModified'
+import HandleStatusResponsesInvalidReturn from './errors/HandleStatusResponsesInvalidReturn'
+import HandleStatusResponseRejected from './errors/HandleStatusResponseRejected'
 
-export default store => response => {
+export default (context = {}) => response => {
   const {
+    store,
     fallbackToAxiosStatusResponse,
     useOnlyAxiosStatusResponse,
     handleStatusResponses,
     customSuccessResponses,
-  } = middlewareOpts
+  } = context;
 
   const {
     data: {
       error,
       errors,
-    },
-    data,
+    } = {},
+    data = {},
   } = response
+
+  let validStatus = false;
+
+  if ( typeof handleStatusResponses === 'function' ) {
+    validStatus = handleStatusResponses( response, store )
+
+    if (defined(validStatus, Boolean, true)) {
+      return response
+    } else if (validStatus == null) {
+      throw new HandleStatusResponsesInvalidReturn(
+        `\`middleware.handleStatusResponses\` is expected to return a Boolean, instead ${JSON.stringify(validStatus)} was returned`,
+      )
+    }
+  }
 
   // Try catching the response status from the API call, otherwise
   // fallback to Axios own status response.
@@ -32,27 +50,19 @@ export default store => response => {
     )
   )
 
-  if ( typeof handleStatusResponses === 'function' ) {
-    const statusHandled = handleStatusResponses( response, store )
-
-    if ( statusHandled instanceof Promise ) {
-      return statusHandled
-    } else {
-      console.warn(`You didn't return a Promise from 'handleStatusResponses'-method.`)
-    }
-  } else if ( status !== 200
-    && status !== 201
-    && status !== 204 ) {
+  if ( status >= 200 && status < 300 ) {
+    // .. we good
+  } else {
     // If we have a custom success response and we received one that fits
     // our array
     if ( customSuccessResponses != null
       && customSuccessResponses.constructor === Array
       && customSuccessResponses.indexOf( status ) !== -1 ) {
-      // .. code
+      // .. we good
     } else if ( status === 304 ) {
-      return Promise.reject( new ResponseNotModified( response ) )
+      throw new ResponseNotModified( response )
     } else {
-      return Promise.reject( new ResponseWithBadStatusCode( response ) )
+      throw new ResponseWithBadStatusCode( response )
     }
   }
 
@@ -61,17 +71,19 @@ export default store => response => {
    * by default look for the keys `error` or `errors` in the response
    * object to see if we should deal with them.
    */
-  if ( typeof handleStatusResponses !== 'function' ) {
+  if ( typeof handleStatusResponses !== 'function' || !validStatus ) {
     if ( error != null
       && error.constructor === String
       && errors instanceof Array === false ) {
-      return Promise.reject( new ResponseWithError( error ) )
+      throw new ResponseWithError( error )
     }
 
     if ( errors != null
       && errors.constructor === Array
       && errors.length > 0 ) {
-      return Promise.reject( new ResponseWithErrors( errors ) )
+      throw new ResponseWithErrors( errors )
     }
   }
+
+  return response
 }

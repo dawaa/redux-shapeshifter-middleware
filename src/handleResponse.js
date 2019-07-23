@@ -1,7 +1,6 @@
 import { removeFromStack }   from './callStack'
 import { isGeneratorFn }     from './generator'
 import { middlewareOpts }    from './middleware'
-import handleStatusResponses from './handleStatusResponses'
 import handleGeneratorFn     from './handleGeneratorFn'
 import ResponseErrorMessage  from './errors/ResponseErrorMessage'
 
@@ -35,7 +34,6 @@ export default store => next => response => async ({
   const { data, headers = {} } = response
   const { errors, error }      = data
 
-  const handledStatusResponse = await handleStatusResponses( store )( response )
 
   if ( isGeneratorFn( success ) ) {
     return handleGeneratorFn( store )( next )( response )({ success, types, meta })

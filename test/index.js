@@ -933,7 +933,7 @@ describe( 'shapeshifter middleware', () => {
         const expectedAction = {
           type: 'API_ERROR',
           message: 'FETCH_USER_FAILED failed.',
-          error: sinon.match.instanceOf(ResponseErrorMessage)
+          error: sinon.match.instanceOf(ResponseWithBadStatusCode)
         }
 
         await assert.isFulfilled(dispatch( action ))
@@ -966,7 +966,7 @@ describe( 'shapeshifter middleware', () => {
         const expectedAction = {
           type: 'FETCH_USER_FAILED',
           message: 'Failed to fetch a user.',
-          error: sinon.match.instanceOf(ResponseErrorMessage)
+          error: sinon.match.instanceOf(ResponseWithBadStatusCode)
         }
 
         await assert.isFulfilled(dispatch( action ))
@@ -1046,11 +1046,11 @@ describe( 'shapeshifter middleware', () => {
           handleStatusResponses(response, store) {
             if ( response.data && response.data.errors ) {
               rejectSpy()
-              return Promise.reject( new ResponseErrorMessage( response.data.errors ) )
+              return false
             }
 
             resolveSpy()
-            return Promise.resolve()
+            return true
           }
         })
 
@@ -1088,7 +1088,7 @@ describe( 'shapeshifter middleware', () => {
         assert.calledWith(
           failureSpy,
           'FETCH_USER_FAILED',
-          sinon.match.instanceOf( ResponseErrorMessage ),
+          sinon.match.instanceOf( ResponseWithErrors ),
         )
         mock.verify()
       } )
@@ -1175,11 +1175,11 @@ describe( 'shapeshifter middleware', () => {
         handleStatusResponses(response, store) {
           if ( response.data && response.data.errors ) {
             rejectSpy()
-            return Promise.reject( response.data.errors )
+            return true
           }
 
           resolveSpy()
-          return Promise.resolve()
+          return false
         }
       })
 
