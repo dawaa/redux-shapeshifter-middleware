@@ -2047,6 +2047,7 @@ describe( 'shapeshifter middleware', () => {
             }
           },
           interval: 10,
+          useFullResponseObject: true,
         })
       }
 
@@ -2137,6 +2138,7 @@ describe( 'shapeshifter middleware', () => {
             }
           },
           interval: 50,
+          useFullResponseObject: true,
         })
       }
 
