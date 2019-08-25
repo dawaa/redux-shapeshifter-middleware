@@ -17,11 +17,12 @@
   },
   "license": "MIT",
   "scripts": {
-    "prepublish": "yarn run test:all && yarn run build:babel",
+    "prepublish": "yarn run lint --max-warnings=0 && yarn run test:all && yarn run build:babel",
     "test": "cross-env NODE_ENV=test nyc mocha",
     "test:all": "cross-env NODE_ENV=test nyc mocha \"test/**/*.js\"",
     "test:debug": "mocha --inspect test/*.js",
     "test:watch": "yarn run test:all --watch",
+    "lint": "eslint .",
     "build:babel": "rimraf ./lib && babel src --out-dir lib --copy-files"
   },
   "keywords": [
@@ -63,6 +64,9 @@
     "chai-as-promised": "^7.1.1",
     "cross-env": "^5.2.0",
     "decache": "^4.5.1",
+    "eslint": "^5.16.0",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-plugin-import": "^2.18.2",
     "i": "^0.3.6",
     "mocha": "^6.2.0",
     "npm": "^6.0.0",
