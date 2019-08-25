@@ -4,45 +4,35 @@ import axios, { CancelToken } from 'axios'
 // internal
 import recursiveObjFind             from './recursiveObjFind'
 import { isGeneratorFn }            from './generator'
-import { API, API_ERROR, API_VOID } from './consts'
+import defaultMiddlewareOptions from './defaults'
 import {
   removeFromStack,
   existsInStack,
 } from './callStack'
 import * as callStack from './callStack'
 import handleResponse from './handleResponse'
+import handleETag from './handleETag'
+import handleResponseStatus from './handleStatusResponses'
+import handleRepeater from './handleRepeater'
 import validateAction from './utils/validateAction'
 import validateMiddlewareOptions from './utils/validateMiddlewareOptions'
+import defineRequestBodyPayload from './utils/defineRequestBodyPayload'
 import ResponseNotModified from './errors/ResponseNotModified'
 import ResponseRepeatReject from './errors/ResponseRepeatReject'
 import NotShapeshifterAction from './errors/NotShapeshifterAction'
 import MalformedShapeshifterAction from './errors/MalformedShapeshifterAction'
 import MiddlewareOptionsValidationError from './errors/MiddlewareOptionsValidationError'
+import InvalidMethodError from './errors/InvalidMethodError'
 import isShapeshifterError from './utils/isShapeshifterError'
 
-const defaultMiddlewareOpts = {
-  base: '',
-  constants: {
-    API,
-    API_ERROR,
-    API_VOID
-  },
-  handleStatusResponses: null,
-  fallbackToAxiosStatusResponse: true,
-  customSuccessResponses: null,
-  useOnlyAxiosStatusResponse: false,
-  useETags: false,
-  emitRequestType: false,
-  useFullResponseObject: false,
-  warnOnCancellation: false,
+export let middlewareOpts = {
+  ...defaultMiddlewareOptions,
 }
-
-export let middlewareOpts = {}
 export const urlETags = {}
 
 const middleware = (options) => {
   middlewareOpts = validateMiddlewareOptions({
-    ...defaultMiddlewareOpts,
+    ...defaultMiddlewareOptions,
     ...options,
   })
 
@@ -223,15 +213,11 @@ const middleware = (options) => {
       meta.params = Object.assign( {}, parameters )
     }
 
-    // Deal with how to set the body of our request, handling 'delete'
-    // as a special case
-    const params = [ 'post', 'put', 'patch' ].includes( method )
-      ? parameters
-      : (
-        method === 'delete'
-          ? { data: parameters }
-          : { params: parameters }
-      )
+    const params = defineRequestBodyPayload( method, parameters )
+
+    if ( params instanceof InvalidMethodError ) {
+      throw params
+    }
 
     const config = Object.assign(
       {},
@@ -254,29 +240,9 @@ const middleware = (options) => {
     const url = baseURL + uris
 
     let _call
-    let requestConfig = {
-      url,
-      method,
-    }
-
-    // Check if method can contain data and a config
-    if ( [ 'post', 'put', 'patch' ].indexOf( method.toLowerCase() ) !== -1 ) {
-      requestConfig = {
-        ...requestConfig,
-        data: params,
-        ...config,
-      }
-
-    } else {
-      requestConfig = {
-        ...requestConfig,
-        ...params,
-        ...config,
-      }
-    }
+    const requestConfig = { url, method, ...params, ...config }
 
     const _store = { dispatch, state: getState(), getState }
-    const processResponse = handleResponse( _store )( next )
 
     _call = axios.request( requestConfig )
 
@@ -285,98 +251,42 @@ const middleware = (options) => {
         removeFromStack( REQUEST )
         return response
       })
-      .then((response) => {
-        const { headers } = response
-        const normalizedHeaders = {}
-
-        if ( headers == null ) {
-          return response
-        }
-
-        Object.keys( headers ).forEach( headerKey => {
-          const header = headers[ headerKey ]
-          normalizedHeaders[ headerKey.toLowerCase() ] = header
-        } )
-
-        if ( middlewareOpts.useETags && normalizedHeaders.etag ) {
-          urlETags[ uris ] = normalizedHeaders.etag
-
-          if ( middlewareOpts.dispatchETagCreationType ) {
-            dispatch({
-              type: middlewareOpts.dispatchETagCreationType,
-              ETag: normalizedHeaders.etag,
-              key: uris,
-            })
-          }
-        }
-
-        return response
-      })
-      .then(response =>
-        processResponse( response )({
-          success,
-          failure,
-          types: { REQUEST, SUCCESS, FAILURE },
-          meta,
-          repeat,
-          useFullResponseObject,
-        })
-      )
-      .then(response => {
-        if ( !response || !response._shapeShifterRepeat ) return response
-
-        return new Promise((parentResolve, parentReject) => {
-          const resolveRepeater = data => {
-            dispatch(
-              success(
-                SUCCESS,
-                data,
-                meta,
-                (meta.getState && typeof meta.getState === 'function' ? null : store),
-              )
-            )
-
-            parentResolve( data )
-            return data
-          }
-          const rejectRepeater = data => {
-            parentReject( new ResponseRepeatReject( data ) )
-            return data
-          }
-
-          const repeater = async () => {
-            const newRequest  = await axios.request( requestConfig )
-            const newResponse = await processResponse( newRequest )({
-              success,
-              failure,
-              types: { REQUEST, SUCCESS, FAILURE },
-              meta,
-              repeat,
-            })
-
-            delete newResponse._shapeShifterRepeat
-
-            const result = repeat(
-              newResponse,
-              resolveRepeater,
-              rejectRepeater,
-            )
-
-            if ( result === true ) {
-              return resolveRepeater( newResponse )
-            } else if ( result === false ) {
-              return rejectRepeater( newResponse )
-            } else if ( result != null && result.constructor !== Boolean ) {
-              return result
-            }
-            setTimeout(() => {
-              repeater()
-            }, interval)
-          }
-
-          return repeater()
-        })
-      })
+      .then(handleResponseStatus({
+        store: _store,
+        fallbackToAxiosStatusResponse: middlewareOpts.fallbackToAxiosStatusResponse,
+        useOnlyAxiosStatusResponse: middlewareOpts.useOnlyAxiosStatusResponse,
+        handleStatusResponses: middlewareOpts.handleStatusResponses,
+        customSuccessResponses: middlewareOpts.customSuccessResponses,
+      }))
+      .then(handleETag({
+        dispatch,
+        ETags: urlETags,
+        path: uris,
+        dispatchETagCreationType: middlewareOpts.dispatchETagCreationType,
+        useETags: middlewareOpts.useETags,
+      }))
+      .then(handleResponse({
+        store: _store,
+        next,
+        success,
+        failure,
+        types: { REQUEST, SUCCESS, FAILURE },
+        meta,
+        repeat,
+        useFullResponseObject,
+      }))
+      .then(handleRepeater({
+        store: _store,
+        next,
+        requestConfig,
+        success,
+        failure,
+        types: { REQUEST, SUCCESS, FAILURE },
+        meta,
+        repeat,
+        interval,
+        useFullResponseObject,
+      }))
       .catch( function shapeshifterRequestCatch(error) {
         const isAxiosError = error && error.isAxiosError || false
 

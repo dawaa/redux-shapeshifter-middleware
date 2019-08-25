@@ -1,9 +1,9 @@
 import { removeFromStack }   from './callStack'
 import { isGeneratorFn }     from './generator'
 import { middlewareOpts }    from './middleware'
-import handleStatusResponses from './handleStatusResponses'
 import handleGeneratorFn     from './handleGeneratorFn'
 import ResponseErrorMessage  from './errors/ResponseErrorMessage'
+import defined from './utils/defined'
 
 function validateResponse(response) {
   if ( typeof response.data !== 'object' ) {
@@ -17,34 +17,40 @@ function validateResponse(response) {
   return null
 }
 
-export default store => next => response => async ({
-  success,
-  failure,
-  types,
-  meta,
-  repeat,
-  useFullResponseObject,
-}) => {
-  const validatedResponse = validateResponse( response )
+export default (context = {}) => response => {
+  const {
+    store,
+    next,
+    success,
+    failure,
+    types,
+    meta,
+    repeat,
+    useFullResponseObject,
+    fallbackToAxiosStatusResponse,
+    useOnlyAxiosStatusResponse,
+    handleStatusResponses,
+    customSuccessResponses,
+  } = context;
 
-  if ( validatedResponse ) {
-    return Promise.reject( new ResponseErrorMessage( validatedResponse ) )
-  }
-  const { REQUEST, SUCCESS, FAILURE } = types
+  const validatedResponse = validateResponse(response);
 
-  const { data, headers = {} } = response
-  const { errors, error }      = data
-
-  const handledStatusResponse = await handleStatusResponses( store )( response )
-
-  if ( isGeneratorFn( success ) ) {
-    return handleGeneratorFn( store )( next )( response )({ success, types, meta })
+  if (validatedResponse) {
+    throw new ResponseErrorMessage(validatedResponse);
   }
 
-  // Remove call from callStack when finished
-  removeFromStack( REQUEST )
+  const { REQUEST, SUCCESS, FAILURE } = types;
 
-  if ( repeat && repeat.constructor === Function ) {
+  const { data, headers = {} } = response;
+  const { errors, error } = data;
+
+  if (isGeneratorFn(success)) {
+    return handleGeneratorFn(store)(next)(response)({ success, types, meta });
+  }
+
+  removeFromStack(REQUEST);
+
+  if (defined(repeat, Function)) {
     response._shapeShifterRepeat = true
   } else {
     store.dispatch(
@@ -61,5 +67,5 @@ export default store => next => response => async ({
     )
   }
 
-  return response
+  return response;
 }
