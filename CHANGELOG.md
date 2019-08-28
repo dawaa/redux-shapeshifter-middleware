@@ -3,6 +3,10 @@
 ## [Unreleased]
 Future stuff...
 
+## [1.1.1] - 2019-08-28
+### Changed
+- Accidentally published using `yarn`, silly me
+
 ## [1.1.0] - 2019-08-28
 ### Added
 - Added `defined()` utility function
