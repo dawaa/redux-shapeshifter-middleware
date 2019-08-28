@@ -1,10 +1,9 @@
 import axios from 'axios';
 
 import handleResponse from './handleResponse';
-import defined from './utils/defined';
 import ResponseRepeatReject from './errors/ResponseRepeatReject';
 
-export default (context = {}) => response => {
+export default (context = {}) => (response) => {
   const {
     store,
     next,
@@ -18,24 +17,27 @@ export default (context = {}) => response => {
     useFullResponseObject,
   } = context;
 
+  // eslint-disable-next-line no-underscore-dangle
   if (!response || !response._shapeShifterRepeat) return response;
 
   return new Promise((parentResolve, parentReject) => {
-    const resolveRepeater = response => {
+    // eslint-disable-next-line no-shadow
+    const resolveRepeater = (response) => {
       store.dispatch(
         success(
           SUCCESS,
           (useFullResponseObject ? response : response.data),
           meta,
           (meta && meta.getState && typeof meta.getState === 'function' ? null : store),
-        )
-      )
+        ),
+      );
 
       parentResolve(response);
       return response;
     };
 
-    const rejectRepeater = response => {
+    // eslint-disable-next-line no-shadow
+    const rejectRepeater = (response) => {
       parentReject(new ResponseRepeatReject(response));
       return response;
     };
@@ -53,20 +55,22 @@ export default (context = {}) => response => {
         useFullResponseObject,
       })(newRequest);
 
+      // eslint-disable-next-line no-underscore-dangle
       delete newResponse._shapeShifterRepeat;
 
       const result = repeat(newResponse, resolveRepeater, rejectRepeater);
 
-      if ( result === true ) {
+      if (result === true) {
         return resolveRepeater(newResponse);
-      } else if ( result === false ) {
+      } if (result === false) {
         return rejectRepeater(newResponse);
-      } else if ( result != null && result.constructor !== Boolean ) {
+      } if (result != null && result.constructor !== Boolean) {
         return result;
       }
       setTimeout(() => {
         repeater();
       }, interval);
+      return undefined;
     };
 
     return repeater();

@@ -15,7 +15,6 @@ describe('validateAction', () => {
     ],
     payload: () => {},
   };
-  const allErrorsLength = Object.keys(mandatoryOpts).length;
 
   it('invalidates undefined action', () => {
     const result = validateAction(API_TYPE)();

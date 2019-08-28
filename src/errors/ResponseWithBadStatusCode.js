@@ -1,7 +1,7 @@
 function ResponseWithBadStatusCode(message) {
-  this.name = 'ResponseWithBadStatusCode'
-  this.message = message
-  this.stack = Error().stack
+  this.name = 'ResponseWithBadStatusCode';
+  this.message = message;
+  this.stack = Error().stack;
 }
 
-export default ResponseWithBadStatusCode
+export default ResponseWithBadStatusCode;

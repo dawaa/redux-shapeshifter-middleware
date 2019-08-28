@@ -1,7 +1,7 @@
 function HandleStatusResponseRejected(message) {
-  this.name = 'HandleStatusResponseRejected'
-  this.message = message
-  this.stack = Error().stack
+  this.name = 'HandleStatusResponseRejected';
+  this.message = message;
+  this.stack = Error().stack;
 }
 
-export default HandleStatusResponseRejected
+export default HandleStatusResponseRejected;

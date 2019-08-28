@@ -1,11 +1,11 @@
-import { API, API_ERROR, API_VOID } from './consts'
+import { API, API_ERROR, API_VOID } from './consts';
 
 export default {
   base: '',
   constants: {
     API,
     API_ERROR,
-    API_VOID
+    API_VOID,
   },
   customSuccessResponses: null,
   emitRequestType: false,
@@ -15,4 +15,4 @@ export default {
   useETags: false,
   useFullResponseObject: false,
   warnOnCancellation: false,
-}
+};

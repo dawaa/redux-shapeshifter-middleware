@@ -4,10 +4,10 @@ import sinon from 'sinon';
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 
-chai.use( chaiAsPromised )
-
 import ResponseRepeatReject from '../src/errors/ResponseRepeatReject';
 import handleRepeater from '../src/handleRepeater';
+
+chai.use(chaiAsPromised);
 
 const mock = new MockAdapter(axios);
 const sandbox = sinon.createSandbox();
@@ -43,6 +43,7 @@ describe('handleRepeater', () => {
   });
 
   it('returns response if `_shapeShifterRepeat` is missing on the response object', () => {
+    // eslint-disable-next-line no-underscore-dangle
     delete mockResponse._shapeShifterRepeat;
     const result = handleRepeater(mockContext)(mockResponse);
 
@@ -58,7 +59,7 @@ describe('handleRepeater', () => {
     };
     mock.onGet(mockContext.requestConfig.url).replyOnce(200, {});
 
-    return await chai.assert.isRejected(handleRepeater(mockContext)(mockResponse))
+    return chai.assert.isRejected(handleRepeater(mockContext)(mockResponse))
       .then((result) => {
         chai.assert.instanceOf(result, ResponseRepeatReject);
       });
@@ -71,10 +72,11 @@ describe('handleRepeater', () => {
       if (response && response.data.isOnline) {
         successSpy();
         return resolve(response);
-      } else if (response && response.data.error) {
+      } if (response && response.data.error) {
         failureSpy();
         return reject(response);
       }
+      return undefined;
     };
     mock
       .onGet(mockContext.requestConfig.url)
@@ -91,10 +93,11 @@ describe('handleRepeater', () => {
 
   it('fulfills promise with custom data', () => {
     const customPayload = { userIsOnline: true, abc: true };
-    mockContext.repeat = function repeat(response, resolve, reject) {
+    mockContext.repeat = function repeat(response, resolve) {
       if (response && response.data.isOnline) {
         return resolve(customPayload);
       }
+      return undefined;
     };
     mock
       .onGet(mockContext.requestConfig.url)
@@ -110,13 +113,14 @@ describe('handleRepeater', () => {
     const repeaterSpy = sandbox.spy();
     const successSpy = sandbox.spy();
     let repeatResponse;
-    mockContext.repeat = function repeat(response, resolve, reject) {
+    mockContext.repeat = function repeat(response, resolve) {
       repeaterSpy();
       if (response && response.data.isOnline) {
         successSpy();
         repeatResponse = response;
         return resolve(repeatResponse);
       }
+      return undefined;
     };
     mock
       .onGet(mockContext.requestConfig.url)
@@ -143,7 +147,7 @@ describe('handleRepeater', () => {
     };
     mock
       .onGet(mockContext.requestConfig.url)
-      .replyOnce(200, { isOnline: false })
+      .replyOnce(200, { isOnline: false });
 
     return chai.assert.isRejected(handleRepeater(mockContext)(mockResponse))
       .then((result) => {
@@ -190,6 +194,7 @@ describe('handleRepeater', () => {
       if (response && response.data && response.data.isOnline) {
         return true;
       }
+      return undefined;
     };
 
     mock
@@ -204,6 +209,7 @@ describe('handleRepeater', () => {
       if (response && response.data && response.data.isOnline) {
         return true;
       }
+      return undefined;
     };
 
     mock
@@ -219,10 +225,11 @@ describe('handleRepeater', () => {
 
   it('creates new request with same initial config', () => {
     const spy = sandbox.spy(axios, 'request');
-    mockContext.repeat = function repeat(response, resolve, reject) {
+    mockContext.repeat = function repeat(response, resolve) {
       if (response && response.data.isOnline) {
         return resolve(response);
       }
+      return undefined;
     };
     mock
       .onGet(mockContext.requestConfig.url)
@@ -231,7 +238,7 @@ describe('handleRepeater', () => {
       .replyOnce(200, { isOnline: true });
 
     return chai.assert.isFulfilled(handleRepeater(mockContext)(mockResponse))
-      .then((result) => {
+      .then(() => {
         chai.assert.strictEqual(spy.callCount, 2, 'Something else is wrong');
         chai.assert.deepEqual(spy.args, [
           [mockContext.requestConfig],
@@ -269,7 +276,7 @@ describe('handleRepeater', () => {
     it('calls success with `response.data`', () => {
       mockContext.repeat = function repeat(response, resolve) {
         return resolve(response);
-      }
+      };
 
       return chai.assert.isFulfilled(handleRepeater(mockContext)(mockResponse))
         .then(() => {
@@ -305,7 +312,7 @@ describe('handleRepeater', () => {
       };
 
       return chai.assert.isFulfilled(handleRepeater(mockContext)(mockResponse))
-        .then((response) => {
+        .then(() => {
           chai.assert.calledWith(
             mockContext.success,
             sinon.match.any,
@@ -322,7 +329,7 @@ describe('handleRepeater', () => {
       };
 
       return chai.assert.isFulfilled(handleRepeater(mockContext)(mockResponse))
-        .then((response) => {
+        .then(() => {
           chai.assert.calledWith(
             mockContext.success,
             sinon.match.any,

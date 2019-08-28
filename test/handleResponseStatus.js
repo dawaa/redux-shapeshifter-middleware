@@ -1,16 +1,16 @@
 import chai from 'chai';
-import chaiAsPromised from 'chai-as-promised'
+import chaiAsPromised from 'chai-as-promised';
 import sinon from 'sinon';
 
-chai.use( chaiAsPromised )
-
-import { middlewareOpts } from '../src/middleware';
+import options from '../src/options';
 import handleResponseStatus from '../src/handleStatusResponses';
 import ResponseNotModified from '../src/errors/ResponseNotModified';
 import ResponseWithBadStatusCode from '../src/errors/ResponseWithBadStatusCode';
 import ResponseWithError from '../src/errors/ResponseWithError';
 import ResponseWithErrors from '../src/errors/ResponseWithErrors';
 import HandleStatusResponsesInvalidReturn from '../src/errors/HandleStatusResponsesInvalidReturn';
+
+chai.use(chaiAsPromised);
 
 const sandbox = sinon.createSandbox();
 
@@ -25,10 +25,10 @@ describe('handleResponseStatus', () => {
         state: {},
         getState: sandbox.spy(),
       },
-      fallbackToAxiosStatusResponse: middlewareOpts.fallbackToAxiosStatusResponse,
-      useOnlyAxiosStatusResponse: middlewareOpts.useOnlyAxiosStatusResponse,
-      handleStatusResponses: middlewareOpts.handleStatusResponse,
-      customSuccessResponses: middlewareOpts.customSuccessResponses,
+      fallbackToAxiosStatusResponse: options.fallbackToAxiosStatusResponse,
+      useOnlyAxiosStatusResponse: options.useOnlyAxiosStatusResponse,
+      handleStatusResponses: options.handleStatusResponse,
+      customSuccessResponses: options.customSuccessResponses,
     };
     mockResponse = {
     };
@@ -53,7 +53,7 @@ describe('handleResponseStatus', () => {
       .then(() => {
         chai.assert.notCalled(thenSpy);
         chai.assert.calledOnce(catchSpy);
-      })
+      });
   });
 
   it('throws ResponseNotModified on `response.status` = 304', () => {
@@ -128,14 +128,14 @@ describe('handleResponseStatus', () => {
 
   describe('middleware.handleStatusResponse', () => {
     it('throws HandleStatusResponsesInvalidReturn if not Boolean returned', () => {
-      mockContext.handleStatusResponses = function handleStatusResponses(response, store) {};
+      mockContext.handleStatusResponses = function handleStatusResponses() {};
 
       chai.expect(() => handleResponseStatus(mockContext)(mockResponse))
         .to.throw().instanceOf(HandleStatusResponsesInvalidReturn);
     });
 
     it('throws inside of middleware.handleStatusResponses', () => {
-      mockContext.handleStatusResponses = function handleStatusResponses(response, store) {
+      mockContext.handleStatusResponses = function handleStatusResponses() {
         throw SyntaxError('bad stuff keeps happening!');
       };
 

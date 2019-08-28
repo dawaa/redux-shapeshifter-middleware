@@ -1,101 +1,96 @@
+/* eslint-disable object-shorthand, func-names, no-empty-function */
 // external
-import chai                   from 'chai'
-import sinon                  from 'sinon'
-import axios, { CancelToken } from 'axios'
-import sinonChai              from 'sinon-chai'
-import chaiAsPromised         from 'chai-as-promised'
-import decache                from 'decache'
-chai.use( sinonChai )
-chai.use( chaiAsPromised )
-sinon.assert.expose(chai.assert, { prefix: '' })
+import chai from 'chai';
+import sinon from 'sinon';
+import axios, { CancelToken } from 'axios';
+import sinonChai from 'sinon-chai';
+import chaiAsPromised from 'chai-as-promised';
+import decache from 'decache';
 
 // internal
-import flushPromises     from '../src/flushPromises'
-import { isGeneratorFn } from '../src/generator'
+import flushPromises from '../src/flushPromises';
+import { isGeneratorFn } from '../src/generator';
 import shapeshifter, {
-  middlewareOpts,
-  addToStack,
-  removeFromStack,
   urlETags,
-} from '../src/middleware'
-import * as callStack from '../src/callStack'
-import MiddlewareOptionsValidationError from '../src/errors/MiddlewareOptionsValidationError'
-import ResponseWithError from '../src/errors/ResponseWithError'
-import ResponseWithErrors from '../src/errors/ResponseWithErrors'
-import ResponseErrorMessage from '../src/errors/ResponseErrorMessage'
-import ResponseWithBadStatusCode from '../src/errors/ResponseWithBadStatusCode'
-import ResponseRepeatReject from '../src/errors/ResponseRepeatReject'
+} from '../src/middleware';
+import * as callStack from '../src/callStack';
+import MiddlewareOptionsValidationError from '../src/errors/MiddlewareOptionsValidationError';
+import ResponseWithError from '../src/errors/ResponseWithError';
+import ResponseWithErrors from '../src/errors/ResponseWithErrors';
+import ResponseWithBadStatusCode from '../src/errors/ResponseWithBadStatusCode';
+import ResponseRepeatReject from '../src/errors/ResponseRepeatReject';
 
-const { assert } = chai
+chai.use(sinonChai);
+chai.use(chaiAsPromised);
+sinon.assert.expose(chai.assert, { prefix: '' });
 
-const createApiAction = name => ({
+const { assert } = chai;
+
+const createApiAction = (name) => ({
   type: 'API',
   types: [
     `${name}`,
     `${name}_SUCCESS`,
     `${name}_FAILED`,
-  ]
-})
+  ],
+});
 
-let store, next, dispatch, middleware, sandbox = sinon.createSandbox();
-const defaultConfig = { base: 'http://some.api/v1', auth: { user: 'sessionid' } }
+let store;
+let next;
+let dispatch;
+let middleware;
+const sandbox = sinon.createSandbox();
+const defaultConfig = { base: 'http://some.api/v1', auth: { user: 'sessionid' } };
 const setupMiddleware = (opts = defaultConfig) => {
   store = {
     dispatch: sandbox.stub(),
     getState: () => ({
       user: {
-        sessionid : 'abc123',
-        token     : 'verylongsupersecret123token456',
-      }
-    })
-  }
+        sessionid: 'abc123',
+        token: 'verylongsupersecret123token456',
+      },
+    }),
+  };
 
-  middleware = shapeshifter( opts )
-  next       = store.dispatch
-  dispatch   = action => middleware( store )( next )( action )
-}
+  middleware = shapeshifter(opts);
+  next = store.dispatch;
+  dispatch = (action) => middleware(store)(next)(action);
+};
 
 
-const stubApiResponse = payload => {
-  return sandbox.stub( axios, 'request' ).resolves( payload )
-}
+const stubApiResponse = (payload) => sandbox.stub(axios, 'request').resolves(payload);
 
-describe( 'shapeshifter middleware', () => {
-  var mockToken;
-  var mockCancel;
-
-  function mockCancelToken() {}
-  mockCancelToken.prototype.throwIfRequested = sandbox.spy()
-  mockToken = new mockCancelToken()
-  mockCancel = sandbox.spy()
+describe('shapeshifter middleware', () => {
+  function MockCancelToken() {}
+  MockCancelToken.prototype.throwIfRequested = sandbox.spy();
+  const mockToken = new MockCancelToken();
+  const mockCancel = sandbox.spy();
 
   beforeEach(() => {
-    setupMiddleware()
+    setupMiddleware();
 
     sandbox
-      .stub( CancelToken, 'source' )
-      .callsFake(() => {
-        return {
-          token  : mockToken,
-          cancel : mockCancel,
-        }
-      })
-  })
+      .stub(CancelToken, 'source')
+      .callsFake(() => ({
+        token: mockToken,
+        cancel: mockCancel,
+      }));
+  });
 
   afterEach(() => {
-    sandbox.restore()
-    decache( '../src/callStack' )
-    decache( '../src/middleware' )
-    decache( '../src/generator' )
-  })
+    sandbox.restore();
+    decache('../src/callStack');
+    decache('../src/middleware');
+    decache('../src/generator');
+  });
 
-  it ( 'Should set correct options', () => {
-    chai.assert.deepEqual( middlewareOpts, {
+  it('Should set correct options', () => {
+    chai.assert.deepEqual(middleware.options, {
       base: 'http://some.api/v1',
       constants: {
-        API       : 'API',
-        API_ERROR : 'API_ERROR',
-        API_VOID  : 'API_VOID'
+        API: 'API',
+        API_ERROR: 'API_ERROR',
+        API_VOID: 'API_VOID',
       },
       auth: { user: 'sessionid' },
       handleStatusResponses: null,
@@ -106,45 +101,45 @@ describe( 'shapeshifter middleware', () => {
       emitRequestType: false,
       useFullResponseObject: false,
       warnOnCancellation: false,
-    } )
-  } )
+    });
+  });
 
-  it ( 'Should set headers within `auth` prop and successfully replace values with store values', async () => {
-    const mock = sandbox.mock( console ).expects( 'error' ).once()
-    stubApiResponse({})
+  it('Should set headers within `auth` prop and successfully replace values with store values', async () => {
+    const mock = sandbox.mock(console).expects('error').once();
+    stubApiResponse({});
     setupMiddleware({
-      base : 'http://some.api/v1',
-      auth : {
-        headers : {
-          'Authorization' : 'Bearer #user.token'
-        }
-      }
-    })
+      base: 'http://some.api/v1',
+      auth: {
+        headers: {
+          Authorization: 'Bearer #user.token',
+        },
+      },
+    });
 
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
-        url  : '/users/fetch',
-        auth : true, // Note this is important if we want to actually
-                     // make sure the middleware looks at the Store
-      })
-    }
+        url: '/users/fetch',
+        auth: true, // Note this is important if we want to actually
+        // make sure the middleware looks at the Store
+      }),
+    };
 
-    await assert.isFulfilled(dispatch( action ))
+    await assert.isFulfilled(dispatch(action));
 
     assert.deepEqual(
-      middlewareOpts,
+      middleware.options,
       {
-        base : 'http://some.api/v1',
+        base: 'http://some.api/v1',
         constants: {
-          API       : 'API',
-          API_ERROR : 'API_ERROR',
-          API_VOID  : 'API_VOID',
+          API: 'API',
+          API_ERROR: 'API_ERROR',
+          API_VOID: 'API_VOID',
         },
-        auth : {
-          headers : {
-            'Authorization' : 'Bearer verylongsupersecret123token456',
-          }
+        auth: {
+          headers: {
+            Authorization: 'Bearer verylongsupersecret123token456',
+          },
         },
         handleStatusResponses: null,
         fallbackToAxiosStatusResponse: true,
@@ -154,468 +149,468 @@ describe( 'shapeshifter middleware', () => {
         emitRequestType: false,
         useFullResponseObject: false,
         warnOnCancellation: false,
-      }
-    )
-    mock.verify()
-  } )
-
-  it ( 'should ignore other rules if `useOnlyAxiosStatusResponse` is set to true', async () => {
-    setupMiddleware({
-      base : 'http://some.api/v1',
-      fallbackToAxiosStatusResponse: true,
-      customSuccessResponses: [ 'success' ],
-      useOnlyAxiosStatusResponse: true,
-    })
-    const stub = stubApiResponse({
-      data: {
-        status: 'not-part-of-a-custom-success'
       },
-      status: 200
-    })
+    );
+    mock.verify();
+  });
 
-    const spy = sandbox.spy()
-    const action = {
-      ...createApiAction( 'FETCH_USER' ),
-      payload : () => ({
-        url     : '/users/fetch',
-        success : spy,
-      })
-    }
-
-    await dispatch( action )
-    await flushPromises()
-
-    assert.strictEqual( spy.calledOnce, true )
-  } )
-
-  it ( 'should pass headers correctly to Axios call', async () => {
+  it('should ignore other rules if `useOnlyAxiosStatusResponse` is set to true', async () => {
     setupMiddleware({
-      base : 'http://some.api/v1',
-      auth : {
-        headers : {
-          'Authorization' : 'Bearer #user.token'
-        }
-      }
-    })
+      base: 'http://some.api/v1',
+      fallbackToAxiosStatusResponse: true,
+      customSuccessResponses: ['success'],
+      useOnlyAxiosStatusResponse: true,
+    });
+    stubApiResponse({
+      data: {
+        status: 'not-part-of-a-custom-success',
+      },
+      status: 200,
+    });
+
+    const spy = sandbox.spy();
+    const action = {
+      ...createApiAction('FETCH_USER'),
+      payload: () => ({
+        url: '/users/fetch',
+        success: spy,
+      }),
+    };
+
+    await dispatch(action);
+    await flushPromises();
+
+    assert.strictEqual(spy.calledOnce, true);
+  });
+
+  it('should pass headers correctly to Axios call', async () => {
+    setupMiddleware({
+      base: 'http://some.api/v1',
+      auth: {
+        headers: {
+          Authorization: 'Bearer #user.token',
+        },
+      },
+    });
     const stub = stubApiResponse({
       data: {
-        status: 200
-      }
-    })
+        status: 200,
+      },
+    });
 
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
-        url  : '/users/fetch',
-        auth : true, // Note this is important if we want to actually
-                     // make sure the middleware looks at the Store
-      })
-    }
+        url: '/users/fetch',
+        auth: true, // Note this is important if we want to actually
+        // make sure the middleware looks at the Store
+      }),
+    };
 
     const expectedAxiosParams = {
-      config : {
+      config: {
         url: 'http://some.api/v1/users/fetch',
         method: 'get',
-        headers : {
-          Authorization : 'Bearer verylongsupersecret123token456',
+        headers: {
+          Authorization: 'Bearer verylongsupersecret123token456',
         },
-        params  : {
+        params: {
         },
-        cancelToken : mockToken,
-      }
-    }
+        cancelToken: mockToken,
+      },
+    };
 
-    await dispatch( action )
+    await dispatch(action);
 
     chai.assert.deepEqual(
-      stub.args[ 0 ][ 0 ],
+      stub.args[0][0],
       expectedAxiosParams.config,
-      'The passed in config to Axios should match and should\'ve passed in Authorization header.'
-    )
-  } )
+      'The passed in config to Axios should match and should\'ve passed in Authorization header.',
+    );
+  });
 
-  it ( 'should correctly pass options to axios config parameter', async () => {
+  it('should correctly pass options to axios config parameter', async () => {
     // We are going to set the base ourselves through Axios config parameter
-    setupMiddleware({ base: '' })
-    const stub = stubApiResponse({ data: { status: 200 } })
+    setupMiddleware({ base: '' });
+    const stub = stubApiResponse({ data: { status: 200 } });
 
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
-        url  : '/users/fetch',
+        url: '/users/fetch',
       }),
       axios: {
-        baseURL : 'http://test.base',
-        headers : {
-          'custom-header': 'very custom yaaaas'
+        baseURL: 'http://test.base',
+        headers: {
+          'custom-header': 'very custom yaaaas',
         },
-        params  : {
+        params: {
           id: 1,
           user: 'dawaa',
-        }
-      }
-    }
+        },
+      },
+    };
     const expected = {
       ...action.axios,
       method: 'get',
-      url: 'http://test.base/users/fetch'
-    }
+      url: 'http://test.base/users/fetch',
+    };
 
-    await dispatch( action )
-    await flushPromises()
+    await dispatch(action);
+    await flushPromises();
 
     chai.assert.deepEqual(
       expected,
-      stub.args[ 0 ][ 0 ],
-      'Should add Axios config to our config/params parameter in our Axios call'
-    )
-  } )
+      stub.args[0][0],
+      'Should add Axios config to our config/params parameter in our Axios call',
+    );
+  });
 
-  it ( 'should correctly merge headers if auth is also passed', async () => {
+  it('should correctly merge headers if auth is also passed', async () => {
     setupMiddleware({
-      base : 'http://some.api/v1',
-      auth : {
-        headers : {
-          'Authorization' : 'Bearer #user.token'
-        }
-      }
-    })
+      base: 'http://some.api/v1',
+      auth: {
+        headers: {
+          Authorization: 'Bearer #user.token',
+        },
+      },
+    });
     const stub = stubApiResponse({
       data: {
-        status: 200
-      }
-    })
+        status: 200,
+      },
+    });
 
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
-        url  : '/users/fetch',
-        auth : true, // Note this is important if we want to actually
-                     // make sure the middleware looks at the Store
+        url: '/users/fetch',
+        auth: true, // Note this is important if we want to actually
+        // make sure the middleware looks at the Store
       }),
       axios: {
         headers: {
           'Content-Type': 'application/json',
         },
       },
-    }
+    };
 
     const expected = {
       method: 'get',
       url: 'http://some.api/v1/users/fetch',
-      headers : {
-        Authorization  : 'Bearer verylongsupersecret123token456',
-        'Content-Type' : 'application/json',
+      headers: {
+        Authorization: 'Bearer verylongsupersecret123token456',
+        'Content-Type': 'application/json',
       },
-      params  : {
+      params: {
       },
-    }
+    };
 
-    await dispatch( action )
+    await dispatch(action);
 
     chai.assert.deepEqual(
-      stub.args[ 0 ][ 0 ],
+      stub.args[0][0],
       expected,
-      'The passed in config to Axios should match and should\'ve passed in Authorization header as well as custom headers.'
-    )
-  } )
+      'The passed in config to Axios should match and should\'ve passed in Authorization header as well as custom headers.',
+    );
+  });
 
-  it ( 'should track ETag(s) and save it to an object by URI segments', async () => {
+  it('should track ETag(s) and save it to an object by URI segments', async () => {
     setupMiddleware({
-      base     : 'http://some.api/v1',
-      useETags : true,
-    })
-    const stub = stubApiResponse({
+      base: 'http://some.api/v1',
+      useETags: true,
+    });
+    stubApiResponse({
       status: 200,
       data: {
         user: { name: 'Alejandro' },
-        status: 200
+        status: 200,
       },
       headers: {
-        ETag: 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
+        ETag: 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"',
       },
-    })
+    });
 
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
         url: '/users/fetch',
-      })
-    }
+      }),
+    };
 
-    await dispatch( action )
-    await flushPromises()
+    await dispatch(action);
+    await flushPromises();
 
-    assert.isNotNull( urlETags[ '/users/fetch' ] )
+    assert.isNotNull(urlETags['/users/fetch']);
     assert.strictEqual(
-      urlETags[ '/users/fetch' ],
+      urlETags['/users/fetch'],
       'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"',
-    )
+    );
 
-    delete urlETags[ '/users/fetch' ]
-  } )
+    delete urlETags['/users/fetch'];
+  });
 
-  it ( 'should add default extra headers if ETag exists for URI segments', async () => {
+  it('should add default extra headers if ETag exists for URI segments', async () => {
     setupMiddleware({
-      base     : 'http://some.api/v1',
-      useETags : true,
-    })
+      base: 'http://some.api/v1',
+      useETags: true,
+    });
 
-    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
-    urlETags[ '/users/fetch' ] = ETag
+    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"';
+    urlETags['/users/fetch'] = ETag;
 
     const stub = stubApiResponse({
       data: {
         user: { name: 'Alejandro' },
-        status: 200
+        status: 200,
       },
       headers: {
         ETag,
       },
-    })
+    });
 
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
         url: '/users/fetch',
-      })
-    }
+      }),
+    };
 
-    await dispatch( action )
+    await dispatch(action);
 
     assert.deepEqual(
-      stub.args[ 0 ][ 0 ].headers,
+      stub.args[0][0].headers,
       {
         'If-None-Match': ETag,
         'Cache-Control': 'private, must-revalidate',
       },
-    )
-    delete urlETags[ '/users/fetch' ]
-  } )
+    );
+    delete urlETags['/users/fetch'];
+  });
 
-  it ( 'should add custom extra headers if ETag exists for URI segments', async () => {
+  it('should add custom extra headers if ETag exists for URI segments', async () => {
     setupMiddleware({
-      base     : 'http://some.api/v1',
-      useETags : true,
+      base: 'http://some.api/v1',
+      useETags: true,
       matchingETagHeaders: ({ ETag, state }) => ({
         'a-custom-header': 'awesome',
         'user-session-id': state.user.sessionid,
         'If-None-Match': ETag,
       }),
-    })
+    });
 
-    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
-    urlETags[ '/users/fetch' ] = ETag
+    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"';
+    urlETags['/users/fetch'] = ETag;
 
     const stub = stubApiResponse({
       data: {
         user: { name: 'Alejandro' },
-        status: 200
+        status: 200,
       },
       headers: {
         ETag,
       },
-    })
+    });
 
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
         url: '/users/fetch',
-      })
-    }
+      }),
+    };
 
-    await dispatch( action )
+    await dispatch(action);
 
     assert.deepEqual(
-      stub.args[ 0 ][ 0 ].headers,
+      stub.args[0][0].headers,
       {
-        'a-custom-header' : 'awesome',
-        'user-session-id' : 'abc123',
-        'If-None-Match'   : ETag,
+        'a-custom-header': 'awesome',
+        'user-session-id': 'abc123',
+        'If-None-Match': ETag,
       },
-    )
-    delete urlETags[ '/users/fetch' ]
-  } )
+    );
+    delete urlETags['/users/fetch'];
+  });
 
-  it ( 'should throw adding custom extra headers if ETag exists but return value is not of type object', async () => {
+  it('should throw adding custom extra headers if ETag exists but return value is not of type object', async () => {
     setupMiddleware({
-      base     : 'http://some.api/v1',
-      useETags : true,
+      base: 'http://some.api/v1',
+      useETags: true,
       matchingETagHeaders: () => {
       },
-    })
+    });
 
-    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
-    urlETags[ '/users/fetch' ] = ETag
+    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"';
+    urlETags['/users/fetch'] = ETag;
 
-    const stub = stubApiResponse({
+    stubApiResponse({
       data: {
         user: { name: 'Alejandro' },
-        status: 200
+        status: 200,
       },
       headers: {
         ETag,
       },
-    })
+    });
 
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
         url: '/users/fetch',
-      })
-    }
+      }),
+    };
 
     assert.throws(
-      () => {dispatch( action )},
+      () => { dispatch(action); },
       Error,
-      'Received ETagHeaders as a function but the returned value was not of type object.'
-    )
+      'Received ETagHeaders as a function but the returned value was not of type object.',
+    );
 
-    delete urlETags[ '/users/fetch' ]
-  } )
+    delete urlETags['/users/fetch'];
+  });
 
-  it ( 'should dispatch user-defined Type on creation of ETag', async () => {
+  it('should dispatch user-defined Type on creation of ETag', async () => {
     setupMiddleware({
-      base                     : 'http://some.api/v1',
-      useETags                 : true,
-      dispatchETagCreationType : 'ON_ETAG_CREATION',
-    })
+      base: 'http://some.api/v1',
+      useETags: true,
+      dispatchETagCreationType: 'ON_ETAG_CREATION',
+    });
 
-    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
+    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"';
 
-    const stub = stubApiResponse({
+    stubApiResponse({
       data: {},
       status: 200,
       headers: {
         ETag,
       },
-    })
+    });
 
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
         url: '/users/fetch',
         ETagCallback: {
           type: 'ETAG_EXISTS',
         },
-      })
-    }
+      }),
+    };
 
-    await dispatch( action )
-    await flushPromises()
+    await dispatch(action);
+    await flushPromises();
 
     assert.deepEqual(
-      store.dispatch.firstCall.args[ 0 ],
+      store.dispatch.firstCall.args[0],
       {
         type: 'ON_ETAG_CREATION',
         ETag,
         key: '/users/fetch',
-      }
-    )
+      },
+    );
 
-    delete urlETags[ '/users/fetch' ]
-  } )
+    delete urlETags['/users/fetch'];
+  });
 
-  it ( 'should call dispatch with ETagCallback if Object on status 304 Not Modified', async () => {
+  it('should call dispatch with ETagCallback if Object on status 304 Not Modified', async () => {
     setupMiddleware({
-      base     : 'http://some.api/v1',
-      useETags : true,
-    })
+      base: 'http://some.api/v1',
+      useETags: true,
+    });
 
-    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
-    urlETags[ '/users/fetch' ] = ETag
+    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"';
+    urlETags['/users/fetch'] = ETag;
 
-    const stub = stubApiResponse({
+    stubApiResponse({
       data: {
         status: 304,
         headers: {
           ETag,
         },
       },
-    })
+    });
 
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
         url: '/users/fetch',
         ETagCallback: {
           type: 'ETAG_EXISTS',
         },
-      })
-    }
+      }),
+    };
 
-    await dispatch( action )
-    await flushPromises()
+    await dispatch(action);
+    await flushPromises();
 
     assert.deepEqual(
-      store.dispatch.firstCall.args[ 0 ],
+      store.dispatch.firstCall.args[0],
       {
         type: 'ETAG_EXISTS',
-      }
-    )
+      },
+    );
 
-    delete urlETags[ '/users/fetch' ]
-  } )
+    delete urlETags['/users/fetch'];
+  });
 
-  it ( 'should call ETagCallback if Function on status 304 Not Modified', async () => {
+  it('should call ETagCallback if Function on status 304 Not Modified', async () => {
     setupMiddleware({
-      base     : 'http://some.api/v1',
-      useETags : true,
-    })
+      base: 'http://some.api/v1',
+      useETags: true,
+    });
 
-    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"'
-    urlETags[ '/users/fetch' ] = ETag
+    const ETag = 'W/"6a-1imqN5TV7FQ3aYFfI8wc9y19qeQ"';
+    urlETags['/users/fetch'] = ETag;
 
-    const stub = stubApiResponse({
+    stubApiResponse({
       data: {
         status: 304,
         headers: {
           ETag,
         },
       },
-    })
+    });
 
-    const spy = sandbox.spy()
+    const spy = sandbox.spy();
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
         url: '/users/fetch',
         ETagCallback: spy,
-      })
-    }
+      }),
+    };
 
-    await dispatch( action )
-    await flushPromises()
+    await dispatch(action);
+    await flushPromises();
 
 
-    assert.isTrue( spy.calledOnce )
+    assert.isTrue(spy.calledOnce);
     assert.deepEqual(
-      spy.args[ 0 ][ 0 ],
+      spy.args[0][0],
       {
-        type     : action.types[ 0 ],
-        path     : '/users/fetch',
-        ETag     : ETag,
-        dispatch : store.dispatch,
-        getState : store.getState,
-        state    : store.getState(),
+        type: action.types[0],
+        path: '/users/fetch',
+        ETag,
+        dispatch: store.dispatch,
+        getState: store.getState,
+        state: store.getState(),
       },
-    )
+    );
 
-    delete urlETags[ '/users/fetch' ]
-  } )
+    delete urlETags['/users/fetch'];
+  });
 
-  it ( 'should override base url in action if done through the axios config object', async () => {
-    const mock = sandbox.mock( console ).expects( 'error' ).once()
-    const stub = stubApiResponse({})
+  it('should override base url in action if done through the axios config object', async () => {
+    const mock = sandbox.mock(console).expects('error').once();
+    const stub = stubApiResponse({});
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
-        url: '/users'
+        url: '/users',
       }),
       axios: {
         baseURL: 'http://other.domain',
       },
-    }
+    };
 
     const expected = {
       url: 'http://other.domain/users',
@@ -624,525 +619,522 @@ describe( 'shapeshifter middleware', () => {
       baseURL: 'http://other.domain',
     };
 
-    await assert.isFulfilled(dispatch( action ))
+    await assert.isFulfilled(dispatch(action));
 
-    assert.deepEqual(stub.args[ 0 ][ 0 ], expected)
-    mock.verify()
-  } )
+    assert.deepEqual(stub.args[0][0], expected);
+    mock.verify();
+  });
 
-  it ( 'should return next(action) if not a valid shapeshifter action', () => {
-    const mw2 = () => 'value of mw2'
-    next.callsFake((...args) => mw2(...args))
-    const thunkAction = () => {}
-    const result = dispatch( thunkAction )
-    chai.assert.calledWith( next, thunkAction )
-    chai.assert.strictEqual( result, mw2() )
-  } )
+  it('should return next(action) if not a valid shapeshifter action', () => {
+    const mw2 = () => 'value of mw2';
+    next.callsFake((...args) => mw2(...args));
+    const thunkAction = () => {};
+    const result = dispatch(thunkAction);
+    chai.assert.calledWith(next, thunkAction);
+    chai.assert.strictEqual(result, mw2());
+  });
 
-  it ( 'should ignore action if not of type API', () => {
-    const action = { type: 'MISS_ME', payload: {} }
-    dispatch( action )
-    chai.assert.isTrue( next.calledOnce )
-    chai.assert.isTrue( next.calledWith( action ) )
-  } )
+  it('should ignore action if not of type API', () => {
+    const action = { type: 'MISS_ME', payload: {} };
+    dispatch(action);
+    chai.assert.isTrue(next.calledOnce);
+    chai.assert.isTrue(next.calledWith(action));
+  });
 
-  it ( 'should call next() if action is of type Function', () => {
-    dispatch(() => {})
-    chai.assert.called( next )
-  } )
+  it('should call next() if action is of type Function', () => {
+    dispatch(() => {});
+    chai.assert.called(next);
+  });
 
-  it ( 'should call action.payload() method with dispatch and state', async () => {
-    const mock = sandbox.mock( console ).expects( 'error' ).once()
-    const payloadSpy = sinon.spy()
+  it('should call action.payload() method with dispatch and state', async () => {
+    const mock = sandbox.mock(console).expects('error').once();
+    const payloadSpy = sinon.spy();
     const action = {
       type: 'API',
       types: [
         'FETCH_USER',
         'FETCH_USER_SUCCESS',
-        'FETCH_USER_FAILED'
+        'FETCH_USER_FAILED',
       ],
-      payload: (store) => {
-        payloadSpy(store)
+      payload: (_store) => {
+        payloadSpy(_store);
 
         return {
-          url: '/users/fetch'
-        }
-      }
-    }
+          url: '/users/fetch',
+        };
+      },
+    };
 
-    await assert.isFulfilled(dispatch( action ))
+    await assert.isFulfilled(dispatch(action));
 
-    chai.assert.isTrue( payloadSpy.called )
+    chai.assert.isTrue(payloadSpy.called);
     chai.assert.calledWith(payloadSpy, {
       dispatch: store.dispatch,
-      state:    store.getState(),
-      cancel:   mockCancel,
-    })
-    mock.verify()
-  } )
+      state: store.getState(),
+      cancel: mockCancel,
+    });
+    mock.verify();
+  });
 
-  it ( 'should throw an error if payload property doesn\'t return an object', () => {
+  it('should throw an error if payload property doesn\'t return an object', () => {
     const action = {
       type: 'API',
       types: ['A', 'B', 'C'],
-      payload: () => {}
-    }
+      payload: () => {},
+    };
 
     chai.expect(
-      () => dispatch( action )
-    ).to.throw( Error )
-  } )
+      () => dispatch(action),
+    ).to.throw(Error);
+  });
 
-  it ( 'should throw if `ACTION.payload.useFullResponseObject` is not of type Boolean', () => {
+  it('should throw if `ACTION.payload.useFullResponseObject` is not of type Boolean', () => {
     const action = {
       type: 'API',
       types: ['A', 'B', 'C'],
       payload: () => ({ useFullResponseObject: 'crash-test' }),
-    }
+    };
 
     chai.expect(
-      () => dispatch( action )
-    ).to.throw( Error, `action.payload.useFullResponseObject is expected to be of type Boolean, got instead crash-test` )
-  } )
+      () => dispatch(action),
+    ).to.throw(Error, 'action.payload.useFullResponseObject is expected to be of type Boolean, got instead crash-test');
+  });
 
-  it ( 'should throw when middleware config contain errors', () => {
+  it('should throw when middleware config contain errors', () => {
     chai.expect(
-      () => setupMiddleware({ constants : null })
-    ).to.throw().an.instanceof( MiddlewareOptionsValidationError )
-  } )
+      () => setupMiddleware({ constants: null }),
+    ).to.throw().an.instanceof(MiddlewareOptionsValidationError);
+  });
 
-  it ( 'should not return full response object when middleware.useFullResponseObject = false', async () => {
+  it('should not return full response object when middleware.useFullResponseObject = false', async () => {
     const payload = {
       data: { status: 200 },
       headers: { someHeader: 'some-value' },
-    }
+    };
     setupMiddleware({
-      base                  : 'http://some.api/v1',
-      useFullResponseObject : false,
-    })
-    stubApiResponse( payload )
-    const spy = sandbox.spy()
+      base: 'http://some.api/v1',
+      useFullResponseObject: false,
+    });
+    stubApiResponse(payload);
+    const spy = sandbox.spy();
 
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
         url: '/users/fetch',
         success: spy,
         useFullResponseObject: false,
       }),
-    }
-    await dispatch( action )
-    await flushPromises()
+    };
+    await dispatch(action);
+    await flushPromises();
 
-    assert.deepInclude( spy.firstCall.args, { status: 200 } )
-  } )
+    assert.deepInclude(spy.firstCall.args, { status: 200 });
+  });
 
-  it ( 'should return full response object when middleware.useFullResponseObject = true', async () => {
+  it('should return full response object when middleware.useFullResponseObject = true', async () => {
     const payload = {
       data: { status: 200 },
       headers: { someHeader: 'some-value' },
-    }
+    };
     setupMiddleware({
-      base                  : 'http://some.api/v1',
-      useFullResponseObject : true,
-    })
-    stubApiResponse( payload )
-    const spy = sandbox.spy()
+      base: 'http://some.api/v1',
+      useFullResponseObject: true,
+    });
+    stubApiResponse(payload);
+    const spy = sandbox.spy();
 
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
         url: '/users/fetch',
         success: spy,
       }),
-    }
-    await dispatch( action )
-    await flushPromises()
+    };
+    await dispatch(action);
+    await flushPromises();
 
-    assert.deepInclude( spy.firstCall.args, payload )
-  } )
+    // console.log(spy.firstCall.args);
+    assert.deepInclude(spy.firstCall.args, payload);
+  });
 
-  it ( 'should not return full response object when ACTION.payload.useFullResponseObject = false', async () => {
+  it('should not return full response object when ACTION.payload.useFullResponseObject = false', async () => {
     const payload = {
       data: { status: 200 },
       headers: { someHeader: 'some-value' },
-    }
-    setupMiddleware({ base : 'http://some.api/v1' })
-    stubApiResponse( payload )
-    const spy = sandbox.spy()
+    };
+    setupMiddleware({ base: 'http://some.api/v1' });
+    stubApiResponse(payload);
+    const spy = sandbox.spy();
 
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
         url: '/users/fetch',
         success: spy,
         useFullResponseObject: false,
       }),
-    }
-    await dispatch( action )
-    await flushPromises()
+    };
+    await dispatch(action);
+    await flushPromises();
 
-    assert.deepInclude( spy.firstCall.args, { status: 200 } )
-  } )
+    assert.deepInclude(spy.firstCall.args, { status: 200 });
+  });
 
-  it ( 'should return full response object when ACTION.payload.useFullResponseObject = true', async () => {
+  it('should return full response object when ACTION.payload.useFullResponseObject = true', async () => {
     const payload = {
       data: { status: 200 },
       headers: { someHeader: 'some-value' },
-    }
-    setupMiddleware({ base : 'http://some.api/v1' })
-    stubApiResponse( payload )
-    const spy = sandbox.spy()
+    };
+    setupMiddleware({ base: 'http://some.api/v1' });
+    stubApiResponse(payload);
+    const spy = sandbox.spy();
 
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
         url: '/users/fetch',
         success: spy,
         useFullResponseObject: true,
       }),
-    }
-    await dispatch( action )
-    await flushPromises()
+    };
+    await dispatch(action);
+    await flushPromises();
 
-    assert.deepInclude( spy.firstCall.args, payload )
-  } )
+    assert.deepInclude(spy.firstCall.args, payload);
+  });
 
-  it ( 'should emit request type if set to true', async () => {
+  it('should emit request type if set to true', async () => {
     setupMiddleware({
-      base            : 'http://some.api/v1',
-      emitRequestType : true,
-    })
-    stubApiResponse({ data: { status: 200 } })
+      base: 'http://some.api/v1',
+      emitRequestType: true,
+    });
+    stubApiResponse({ data: { status: 200 } });
 
-    const payload = { data: { name: 'Alejandro', status: 200 } }
     const action = {
-      ...createApiAction( 'FETCH_USER' ),
+      ...createApiAction('FETCH_USER'),
       payload: () => ({
-        url: '/users/fetch'
-      })
-    }
+        url: '/users/fetch',
+      }),
+    };
 
-    await dispatch( action )
-    await flushPromises()
+    await dispatch(action);
+    await flushPromises();
 
     assert.deepEqual(
-      store.dispatch.firstCall.args[ 0 ],
-      { type: 'FETCH_USER' }
-    )
-  } )
+      store.dispatch.firstCall.args[0],
+      { type: 'FETCH_USER' },
+    );
+  });
 
-  describe( 'axios calls', () => {
-
-    it ( 'Should add call to callStack and remove on success', async () => {
-      const payload  = { data: { name: 'Alejandro', status: 200 } }
-      sandbox.stub( axios, 'request' ).resolves( payload )
-      const addToStackSpy = sandbox.spy( callStack, 'addToStack' )
+  describe('axios calls', () => {
+    it('Should add call to callStack and remove on success', async () => {
+      const payload = { data: { name: 'Alejandro', status: 200 } };
+      sandbox.stub(axios, 'request').resolves(payload);
+      const addToStackSpy = sandbox.spy(callStack, 'addToStack');
 
       const action = {
-        ...createApiAction( 'FETCH_USER' ),
+        ...createApiAction('FETCH_USER'),
         payload: () => ({
-          url: '/users/fetch'
-        })
-      }
+          url: '/users/fetch',
+        }),
+      };
 
-      await dispatch( action )
-      await flushPromises()
+      await dispatch(action);
+      await flushPromises();
 
       chai.assert.isTrue(
         addToStackSpy.calledOnce,
-        '#addToStack should\'ve been called once'
-      )
+        '#addToStack should\'ve been called once',
+      );
       chai.assert.strictEqual(
         addToStackSpy.callCount,
         1,
-        'Should have been called once'
-      )
+        'Should have been called once',
+      );
       chai.assert.deepPropertyVal(
-        addToStackSpy.lastCall.args[ 0 ],
+        addToStackSpy.lastCall.args[0],
         'call',
-        'FETCH_USER'
-      )
-    } )
+        'FETCH_USER',
+      );
+    });
 
-    it ( 'should cancel call and warn', async () => {
-      setupMiddleware({ warnOnCancellation: true })
-      CancelToken.source.restore()
-      const stub = sandbox.stub( global.console, 'warn' )
-      const payload = { data: { name: 'Alejandro', status: 200 } }
-      const resolved = new Promise(r => setTimeout(() => {
-        r( payload )
-      }, 3000))
-      sandbox.stub( axios, 'request' )
-        .onSecondCall().resolves( payload )
-        .callThrough()
+    it('should cancel call and warn', async () => {
+      setupMiddleware({ warnOnCancellation: true });
+      CancelToken.source.restore();
+      const stub = sandbox.stub(global.console, 'warn');
+      const payload = { data: { name: 'Alejandro', status: 200 } };
+      sandbox.stub(axios, 'request')
+        .onSecondCall().resolves(payload)
+        .callThrough();
 
       const action = {
-        ...createApiAction( 'FETCH_USER' ),
+        ...createApiAction('FETCH_USER'),
         payload: () => ({
-          url: '/users/fetch'
-        })
-      }
+          url: '/users/fetch',
+        }),
+      };
       const actionTwo = {
-        ...createApiAction( 'FETCH_USER' ),
+        ...createApiAction('FETCH_USER'),
         payload: () => ({
-          url: '/users/fetch'
-        })
-      }
+          url: '/users/fetch',
+        }),
+      };
 
-      dispatch( action )
-      await dispatch( actionTwo )
+      dispatch(action);
+      await dispatch(actionTwo);
 
-      chai.assert.calledOnce( stub )
-      chai.assert.calledWith( stub, 'FETCH_USER call was canceled.' )
-    } )
+      chai.assert.calledOnce(stub);
+      chai.assert.calledWith(stub, 'FETCH_USER call was canceled.');
+    });
 
-    it ( 'should return same promise chain', () => {
-      let thenSpy, promiseStub
-      sandbox.stub( axios, 'request' ).callsFake(() => {
-        promiseStub = Promise.resolve({ data: { status: 200 } })
-        thenSpy = sandbox.spy(promiseStub, 'then')
-        return promiseStub
-      })
+    it('should return same promise chain', () => {
+      let thenSpy; let
+        promiseStub;
+      sandbox.stub(axios, 'request').callsFake(() => {
+        promiseStub = Promise.resolve({ data: { status: 200 } });
+        thenSpy = sandbox.spy(promiseStub, 'then');
+        return promiseStub;
+      });
 
       const action = {
-        ...createApiAction( 'FETCH_USER' ),
+        ...createApiAction('FETCH_USER'),
         payload: () => ({
-          url: '/users/fetch'
-        })
-      }
+          url: '/users/fetch',
+        }),
+      };
 
-      const p = dispatch( action )
-      p.then(function randomFn() {})
+      const p = dispatch(action);
+      p.then(() => {});
 
       chai.assert.strictEqual(thenSpy.callCount, 1);
-    } )
+    });
 
-    describe( 'Failed API calls', () => {
-      it ( 'Let fallback failure() method capture it', async () => {
-        const mock = sandbox.mock( console ).expects( 'error' ).once()
-        stubApiResponse({ data: 'Failed to do stuff.' })
+    describe('Failed API calls', () => {
+      it('Let fallback failure() method capture it', async () => {
+        const mock = sandbox.mock(console).expects('error').once();
+        stubApiResponse({ data: 'Failed to do stuff.' });
 
         const action = {
-          ...createApiAction( 'FETCH_USER' ),
+          ...createApiAction('FETCH_USER'),
           payload: () => ({
-            url: '/users/fetch'
-          })
-        }
+            url: '/users/fetch',
+          }),
+        };
 
         const expectedAction = {
           type: 'API_ERROR',
           message: 'FETCH_USER_FAILED failed.',
-          error: sinon.match.instanceOf(ResponseWithBadStatusCode)
-        }
+          error: sinon.match.instanceOf(ResponseWithBadStatusCode),
+        };
 
-        await assert.isFulfilled(dispatch( action ))
-        assert.called(store.dispatch)
-        assert.calledWith( store.dispatch, expectedAction )
-        mock.verify()
-      } )
+        await assert.isFulfilled(dispatch(action));
+        assert.called(store.dispatch);
+        assert.calledWith(store.dispatch, expectedAction);
+        mock.verify();
+      });
 
-      it ( 'Custom failure() method', async () => {
-        const mock = sandbox.mock( console ).expects( 'error' ).once()
-        stubApiResponse({ data: 'Failed to do stuff, twice.' })
+      it('Custom failure() method', async () => {
+        const mock = sandbox.mock(console).expects('error').once();
+        stubApiResponse({ data: 'Failed to do stuff, twice.' });
 
         const action = {
           type: 'API',
           types: [
             'FETCH_USER',
             'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
+            'FETCH_USER_FAILED',
           ],
           payload: () => ({
             url: '/users/fetch',
             failure: (type, error) => ({
               type,
               message: 'Failed to fetch a user.',
-              error
-            })
-          })
-        }
+              error,
+            }),
+          }),
+        };
 
         const expectedAction = {
           type: 'FETCH_USER_FAILED',
           message: 'Failed to fetch a user.',
-          error: sinon.match.instanceOf(ResponseWithBadStatusCode)
-        }
+          error: sinon.match.instanceOf(ResponseWithBadStatusCode),
+        };
 
-        await assert.isFulfilled(dispatch( action ))
-        assert.isTrue( store.dispatch.called )
-        assert.isTrue( store.dispatch.calledWith( expectedAction ) )
-        mock.verify()
-      } )
-    } )
+        await assert.isFulfilled(dispatch(action));
+        assert.isTrue(store.dispatch.called);
+        assert.isTrue(store.dispatch.calledWith(expectedAction));
+        mock.verify();
+      });
+    });
 
-    describe( 'Successful API calls, returning errors', () => {
-      it ( 'Should reject with prop `error`', async () => {
-        const mock = sandbox.mock( console ).expects( 'error' ).once()
+    describe('Successful API calls, returning errors', () => {
+      it('Should reject with prop `error`', async () => {
+        const mock = sandbox.mock(console).expects('error').once();
         stubApiResponse({
           data: {
             error: 'An error occurred in the back-end, oh danglers!',
-            status: 200
-          }
-        })
+            status: 200,
+          },
+        });
 
-        const failureSpy = sinon.spy()
+        const failureSpy = sinon.spy();
         const action = {
-          ...createApiAction( 'FETCH_USER' ),
+          ...createApiAction('FETCH_USER'),
           payload: () => ({
             url: '/users/fetch',
-            failure: failureSpy
-          })
-        }
+            failure: failureSpy,
+          }),
+        };
 
-        await assert.isFulfilled(dispatch( action ))
+        await assert.isFulfilled(dispatch(action));
         assert.isTrue(
           failureSpy.called,
-          'Call failure() when receiving prop `error` from back-end'
-        )
+          'Call failure() when receiving prop `error` from back-end',
+        );
         assert.calledWith(
           failureSpy,
           'FETCH_USER_FAILED',
           sinon.match.instanceOf(ResponseWithError),
-        )
-        mock.verify()
-      } )
+        );
+        mock.verify();
+      });
 
-      it ( 'Should reject with prop `errors` (array)', async () => {
-        const mock = sandbox.mock( console ).expects( 'error' ).once()
+      it('Should reject with prop `errors` (array)', async () => {
+        const mock = sandbox.mock(console).expects('error').once();
         stubApiResponse({
           data: {
-            errors: [ 'Reject this one baby', 'Another error' ],
-            status: 200
-          }
-        })
+            errors: ['Reject this one baby', 'Another error'],
+            status: 200,
+          },
+        });
 
-        const failureSpy = sinon.spy()
+        const failureSpy = sinon.spy();
 
         const action = {
-          ...createApiAction( 'FETCH_USER' ),
+          ...createApiAction('FETCH_USER'),
           payload: () => ({
             url: '/users/fetch',
-            failure: failureSpy
-          })
-        }
+            failure: failureSpy,
+          }),
+        };
 
-        await assert.isFulfilled(dispatch( action ))
-        assert.isTrue( failureSpy.called, 'Should call failure()' )
+        await assert.isFulfilled(dispatch(action));
+        assert.isTrue(failureSpy.called, 'Should call failure()');
         assert.calledWith(
           failureSpy,
           'FETCH_USER_FAILED',
           sinon.match.instanceOf(ResponseWithErrors),
-        )
-        mock.verify()
-      } )
+        );
+        mock.verify();
+      });
 
-      it ( 'Should using custom status response handler reject', async () => {
-        const mock = sandbox.mock( console ).expects( 'error' ).once()
-        const rejectSpy  = sandbox.spy()
-        const resolveSpy = sandbox.spy()
+      it('Should using custom status response handler reject', async () => {
+        const mock = sandbox.mock(console).expects('error').once();
+        const rejectSpy = sandbox.spy();
+        const resolveSpy = sandbox.spy();
         setupMiddleware({
           base: 'http://some.api/v1',
-          handleStatusResponses(response, store) {
-            if ( response.data && response.data.errors ) {
-              rejectSpy()
-              return false
+          handleStatusResponses(response) {
+            if (response.data && response.data.errors) {
+              rejectSpy();
+              return false;
             }
 
-            resolveSpy()
-            return true
-          }
-        })
+            resolveSpy();
+            return true;
+          },
+        });
 
         const stub = stubApiResponse({
           data: {
-            errors: [ 'Reject this one baby', 'Another error' ],
-            status: 200
+            errors: ['Reject this one baby', 'Another error'],
+            status: 200,
           },
-          status: 200
-        })
+          status: 200,
+        });
 
-        const failureSpy = sinon.spy()
+        const failureSpy = sinon.spy();
 
         const action = {
-          ...createApiAction( 'FETCH_USER' ),
+          ...createApiAction('FETCH_USER'),
           payload: () => ({
             url: '/users/fetch',
-            failure: failureSpy
-          })
-        }
+            failure: failureSpy,
+          }),
+        };
 
-        await assert.isFulfilled(dispatch( action ))
-        assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
-        assert.isTrue( rejectSpy.called, 'Should return Promise.reject.' )
-        assert.isFalse( resolveSpy.called, 'Should not return Promise.resolve.' )
+        await assert.isFulfilled(dispatch(action));
+        assert.isTrue(stub.calledOnce, 'API call(s) should be once.');
+        assert.isTrue(rejectSpy.called, 'Should return Promise.reject.');
+        assert.isFalse(resolveSpy.called, 'Should not return Promise.resolve.');
 
         assert.isTrue(
           store.dispatch.called,
-          'Should have called dispatch()'
-        )
+          'Should have called dispatch()',
+        );
         assert.isTrue(
           failureSpy.calledOnce,
-          'failure() method of Action should have been called.'
-        )
+          'failure() method of Action should have been called.',
+        );
         assert.calledWith(
           failureSpy,
           'FETCH_USER_FAILED',
-          sinon.match.instanceOf( ResponseWithErrors ),
-        )
-        mock.verify()
-      } )
+          sinon.match.instanceOf(ResponseWithErrors),
+        );
+        mock.verify();
+      });
 
-      it ( 'should using custom status response handler resolve', async () => {
-        const rejectSpy  = sandbox.spy()
-        const resolveSpy = sandbox.spy()
+      it('should using custom status response handler resolve', async () => {
+        const rejectSpy = sandbox.spy();
+        const resolveSpy = sandbox.spy();
         setupMiddleware({
           base: 'http://some.api/v1',
-          handleStatusResponses(response, store) {
-            if ( response.data && response.data.errors ) {
-              rejectSpy()
-              return Promise.reject( response.data.errors )
+          handleStatusResponses(response) {
+            if (response.data && response.data.errors) {
+              rejectSpy();
+              return Promise.reject(response.data.errors);
             }
 
-            resolveSpy()
-            return Promise.resolve()
-          }
-        })
+            resolveSpy();
+            return Promise.resolve();
+          },
+        });
 
         const stub = stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
-            status: 200
+            status: 200,
           },
-          status: 200
-        })
+          status: 200,
+        });
 
-        const successSpy = sinon.spy()
+        const successSpy = sinon.spy();
 
         const action = {
-          ...createApiAction( 'FETCH_USER' ),
+          ...createApiAction('FETCH_USER'),
           payload: () => ({
             url: '/users/fetch',
-            success: successSpy
-          })
-        }
+            success: successSpy,
+          }),
+        };
 
-        await dispatch( action )
-        await flushPromises()
+        await dispatch(action);
+        await flushPromises();
 
-        assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
-        assert.isTrue( resolveSpy.called, 'Should return Promise.resolve.' )
-        assert.isFalse( rejectSpy.called, 'Should not return Promise.reject.' )
+        assert.isTrue(stub.calledOnce, 'API call(s) should be once.');
+        assert.isTrue(resolveSpy.called, 'Should return Promise.resolve.');
+        assert.isFalse(rejectSpy.called, 'Should not return Promise.reject.');
         // Because we have a nested Promise
         setTimeout(() => {
           assert.isTrue(
             store.dispatch.called,
-            'Should have called dispatch()'
-          )
+            'Should have called dispatch()',
+          );
           assert.isTrue(
             successSpy.calledOnce,
-            'success() method of Action should have been called.'
-          )
+            'success() method of Action should have been called.',
+          );
           assert.deepEqual(
             successSpy.firstCall.args,
             [
@@ -1156,138 +1148,138 @@ describe( 'shapeshifter middleware', () => {
                 state: {
                   user: {
                     sessionid: 'abc123',
-                    token: 'verylongsupersecret123token456'
-                  }
-                }
+                    token: 'verylongsupersecret123token456',
+                  },
+                },
               },
-              null
-            ]
-          )
-        })
-      } )
-    } )
+              null,
+            ],
+          );
+        });
+      });
+    });
 
-    it ( 'should using custom status response handler resolve generator fn', async () => {
-      const rejectSpy  = sandbox.spy()
-      const resolveSpy = sandbox.spy()
+    it('should using custom status response handler resolve generator fn', async () => {
+      const rejectSpy = sandbox.spy();
+      const resolveSpy = sandbox.spy();
       setupMiddleware({
         base: 'http://some.api/v1',
-        handleStatusResponses(response, store) {
-          if ( response.data && response.data.errors ) {
-            rejectSpy()
-            return true
+        handleStatusResponses(response) {
+          if (response.data && response.data.errors) {
+            rejectSpy();
+            return true;
           }
 
-          resolveSpy()
-          return false
-        }
-      })
+          resolveSpy();
+          return false;
+        },
+      });
 
       const stub = stubApiResponse({
         data: {
           user: { name: 'Alejandro' },
-          status: 200
+          status: 200,
         },
-        status: 200
-      })
+        status: 200,
+      });
 
-      const successSpy = sinon.spy()
+      const successSpy = sinon.spy();
 
       const action = {
-        ...createApiAction( 'FETCH_USER' ),
+        ...createApiAction('FETCH_USER'),
         payload: () => ({
           url: '/users/fetch',
           success: function* (type, { user }) {
-            successSpy()
-            const fakePayload = { data: { user: { id: 1 }} }
-            const response    = yield new Promise(r => r( fakePayload ))
+            successSpy();
+            const fakePayload = { data: { user: { id: 1 } } };
+            const response = yield new Promise((r) => r(fakePayload));
 
             return {
               type,
               id: response.data.user.id,
-              name: user.name
-            }
+              name: user.name,
+            };
           },
-        })
-      }
+        }),
+      };
 
       const expected = {
         type: 'FETCH_USER_SUCCESS',
         id: 1,
-        name: 'Alejandro'
-      }
+        name: 'Alejandro',
+      };
 
-      await dispatch( action )
-      await flushPromises()
+      await dispatch(action);
+      await flushPromises();
 
-      assert.isTrue( stub.calledOnce, 'API call(s) should be once.' )
-      assert.isTrue( resolveSpy.called, 'Should return Promise.resolve.' )
-      assert.isFalse( rejectSpy.called, 'Should not return Promise.reject.' )
+      assert.isTrue(stub.calledOnce, 'API call(s) should be once.');
+      assert.isTrue(resolveSpy.called, 'Should return Promise.resolve.');
+      assert.isFalse(rejectSpy.called, 'Should not return Promise.reject.');
 
       // Because we have a nested Promise
-      await flushPromises()
+      await flushPromises();
       assert.isTrue(
         store.dispatch.calledOnce,
-        'Should have called dispatch() twice'
-      )
+        'Should have called dispatch() twice',
+      );
       assert.isTrue(
         successSpy.calledOnce,
-        'success() generator method of Action should have been called.'
-      )
+        'success() generator method of Action should have been called.',
+      );
       assert.deepEqual(
-        store.dispatch.firstCall.args[ 0 ],
+        store.dispatch.firstCall.args[0],
         expected,
-        'handleStatusResponse() should resolve success() generator fn'
-      )
-    } )
+        'handleStatusResponse() should resolve success() generator fn',
+      );
+    });
 
-    describe( 'Successful API calls', () => {
-      it ( 'Successful API call but wrong status code', async () => {
-        const mock = sandbox.mock( console ).expects( 'error' ).once()
+    describe('Successful API calls', () => {
+      it('Successful API call but wrong status code', async () => {
+        const mock = sandbox.mock(console).expects('error').once();
         stubApiResponse({
           data: {
-            errors: [ 'Error authorizing or something' ],
-            status: 401
-          }
-        })
+            errors: ['Error authorizing or something'],
+            status: 401,
+          },
+        });
 
         const action = {
           type: 'API',
           types: [
             'FETCH_USER',
             'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
+            'FETCH_USER_FAILED',
           ],
           payload: () => ({
             url: '/users/fetch',
             success: (type, { user: { name } }) => ({
               type,
-              firstName: name
-            })
-          })
-        }
+              firstName: name,
+            }),
+          }),
+        };
 
         const expectedAction = {
-          type    : 'API_ERROR',
-          message : 'FETCH_USER_FAILED failed.',
-          error   : sinon.match.instanceOf(ResponseWithBadStatusCode),
-        }
+          type: 'API_ERROR',
+          message: 'FETCH_USER_FAILED failed.',
+          error: sinon.match.instanceOf(ResponseWithBadStatusCode),
+        };
 
-        await assert.isFulfilled(dispatch( action ))
+        await assert.isFulfilled(dispatch(action));
         chai.assert.isTrue(
           store.dispatch.called,
-          'store.dispatch() should have been called.'
-        )
+          'store.dispatch() should have been called.',
+        );
         chai.assert.isTrue(
-          store.dispatch.calledWith( expectedAction ),
-          'store.dispatch() should have been called with expectedAction.'
-        )
-        mock.verify()
-      } )
+          store.dispatch.calledWith(expectedAction),
+          'store.dispatch() should have been called with expectedAction.',
+        );
+        mock.verify();
+      });
 
-      it ( 'returns not modified response and doesn\'t log an error', async () => {
-        const mock = sandbox.mock( console ).expects( 'error' ).never()
-        sandbox.stub( axios, 'request' ).rejects({
+      it('returns not modified response and doesn\'t log an error', async () => {
+        const mock = sandbox.mock(console).expects('error').never();
+        sandbox.stub(axios, 'request').rejects({
           isAxiosError: true,
           response: {
             data: '',
@@ -1299,66 +1291,66 @@ describe( 'shapeshifter middleware', () => {
     at createError (http://localhost:3001/static/js/bundle.js:8323:15)
     at settle (http://localhost:3001/static/js/bundle.js:8569:12)
     at XMLHttpRequest.handleLoad (http://localhost:3001/static/js/bundle.js:7836:7)`,
-        })
+        });
 
         const action = {
-          ...createApiAction( 'FETCH_USER' ),
+          ...createApiAction('FETCH_USER'),
           payload: () => ({
             url: '/users/fetch',
-          })
-        }
+          }),
+        };
 
-        await assert.isFulfilled(dispatch( action ))
-        chai.assert.notCalled(store.dispatch)
-        mock.verify()
-      } )
+        await assert.isFulfilled(dispatch(action));
+        chai.assert.notCalled(store.dispatch);
+        mock.verify();
+      });
 
-      it ( 'fails on success() with a SyntaxError and logs it', async () => {
-        const mock = sandbox.mock( console ).expects( 'error' ).once()
+      it('fails on success() with a SyntaxError and logs it', async () => {
+        const mock = sandbox.mock(console).expects('error').once();
         stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
-            status: 200
-          }
-        })
-        const successSpy = sandbox.spy()
-        const failureSpy = sandbox.spy()
+            status: 200,
+          },
+        });
+        const successSpy = sandbox.spy();
+        const failureSpy = sandbox.spy();
         const action = {
-          ...createApiAction( 'FETCH_USER' ),
+          ...createApiAction('FETCH_USER'),
           payload: () => ({
             url: '/users/fetch',
             success: () => {
-              successSpy()
-              const arr = []
-              arr.o.reduce(() => {})
+              successSpy();
+              const arr = [];
+              arr.o.reduce(() => ({}));
             },
             failure: () => {
-              failureSpy()
-            }
-          })
-        }
+              failureSpy();
+            },
+          }),
+        };
 
-        await assert.isFulfilled(dispatch( action ))
-        chai.assert.calledOnce(successSpy)
-        chai.assert.notCalled(failureSpy)
-        mock.verify()
-      } )
+        await assert.isFulfilled(dispatch(action));
+        chai.assert.calledOnce(successSpy);
+        chai.assert.notCalled(failureSpy);
+        mock.verify();
+      });
 
-      it ( 'Params should match using POST', async () => {
+      it('Params should match using POST', async () => {
         const stub = stubApiResponse({
           method: 'post',
           data: {
             user: { name: 'Alejandro' },
-            status: 200
-          }
-        })
+            status: 200,
+          },
+        });
 
         const action = {
           type: 'API',
           types: [
             'FETCH_USER',
             'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
+            'FETCH_USER_FAILED',
           ],
           method: 'post',
           payload: () => ({
@@ -1366,163 +1358,163 @@ describe( 'shapeshifter middleware', () => {
             params: {
               user_id: 1,
               username: 'dawaa',
-              email: 'dawaa@heaven.com'
+              email: 'dawaa@heaven.com',
             },
-          })
-        }
+          }),
+        };
 
         const expected = {
           method: 'post',
           url: 'http://some.api/v1/users/fetch',
           data: {
-            user_id     : 1,
-            username    : 'dawaa',
-            email       : 'dawaa@heaven.com',
+            user_id: 1,
+            username: 'dawaa',
+            email: 'dawaa@heaven.com',
           },
-          cancelToken : mockToken
-        }
+          cancelToken: mockToken,
+        };
 
-        await dispatch( action )
+        await dispatch(action);
 
         assert.deepEqual(
-          stub.args[ 0 ][ 0 ],
+          stub.args[0][0],
           expected,
-        )
-      } )
+        );
+      });
 
-      it ( 'should not append anything if just a GET request is made', async () => {
+      it('should not append anything if just a GET request is made', async () => {
         const stub = stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
-            status: 200
-          }
-        })
+            status: 200,
+          },
+        });
 
         const action = {
           type: 'API',
           types: [
             'FETCH_USER',
             'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
+            'FETCH_USER_FAILED',
           ],
           payload: () => ({
             url: '/users/fetch',
-          })
-        }
+          }),
+        };
 
-        await dispatch( action )
+        await dispatch(action);
 
         assert.deepEqual(
-          stub.args[ 0 ][ 0 ].params,
+          stub.args[0][0].params,
           {},
-        )
-      } )
+        );
+      });
 
-      it ( 'Params should match without auth property', async () => {
+      it('Params should match without auth property', async () => {
         const stub = stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
-            status: 200
-          }
-        })
+            status: 200,
+          },
+        });
 
         const action = {
           type: 'API',
           types: [
             'FETCH_USER',
             'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
+            'FETCH_USER_FAILED',
           ],
           payload: () => ({
             url: '/users/fetch',
             params: {
               username: 'dawaa',
-              email: 'dawaa@heaven.com'
+              email: 'dawaa@heaven.com',
             },
-          })
-        }
+          }),
+        };
 
         const expected = {
           method: 'get',
           url: 'http://some.api/v1/users/fetch',
           params: {
-            username    : 'dawaa',
-            email       : 'dawaa@heaven.com',
+            username: 'dawaa',
+            email: 'dawaa@heaven.com',
           },
           cancelToken: mockToken,
-        }
+        };
 
-        await dispatch( action )
-        await flushPromises()
+        await dispatch(action);
+        await flushPromises();
 
-        assert.deepEqual( stub.args[ 0 ][ 0 ], expected )
-      } )
+        assert.deepEqual(stub.args[0][0], expected);
+      });
 
-      it ( 'Params should match with auth property', async () => {
+      it('Params should match with auth property', async () => {
         const stub = stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
-            status: 200
-          }
-        })
+            status: 200,
+          },
+        });
 
         const action = {
           type: 'API',
           types: [
             'FETCH_USER',
             'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
+            'FETCH_USER_FAILED',
           ],
           payload: () => ({
             url: '/users/fetch',
             params: {
               username: 'dawaa',
-              email: 'dawaa@heaven.com'
+              email: 'dawaa@heaven.com',
             },
-            auth: true
-          })
-        }
+            auth: true,
+          }),
+        };
 
         const expected = {
           method: 'get',
           url: 'http://some.api/v1/users/fetch',
           params: {
-            username  : 'dawaa',
-            email     : 'dawaa@heaven.com',
-            sessionid : 'abc123',
+            username: 'dawaa',
+            email: 'dawaa@heaven.com',
+            sessionid: 'abc123',
           },
           cancelToken: mockToken,
-        }
+        };
 
-        await dispatch( action )
-        await flushPromises()
+        await dispatch(action);
+        await flushPromises();
 
-        chai.assert.deepEqual( stub.args[ 0 ][ 0 ], expected )
-      } )
+        chai.assert.deepEqual(stub.args[0][0], expected);
+      });
 
-      it ( 'Success() method should be called with (type, payload, meta = store)', async () => {
-        const stub = stubApiResponse({
+      it('Success() method should be called with (type, payload, meta = store)', async () => {
+        stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
-            status: 200
-          }
-        })
+            status: 200,
+          },
+        });
 
-        const spy = sinon.spy()
+        const spy = sinon.spy();
 
         const action = {
           type: 'API',
           types: [
             'FETCH_USER',
             'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
+            'FETCH_USER_FAILED',
           ],
           payload: () => ({
             url: '/users/fetch',
             success: spy,
-            auth: true
-          })
-        }
+            auth: true,
+          }),
+        };
 
         const expected = [
           // type
@@ -1530,53 +1522,53 @@ describe( 'shapeshifter middleware', () => {
           // payload
           {
             user: { name: 'Alejandro' },
-            status: 200
+            status: 200,
           },
           // meta = store
           {
             dispatch: store.dispatch,
             getState: store.getState,
-            state: store.getState()
+            state: store.getState(),
           },
           // store = null
-          null
-        ]
+          null,
+        ];
 
-        await dispatch( action )
-        await flushPromises()
+        await dispatch(action);
+        await flushPromises();
 
-        chai.assert.isTrue( spy.called, 'payload.success() was called' )
-        chai.assert.deepEqual( spy.args[ 0 ], expected )
-      } )
+        chai.assert.isTrue(spy.called, 'payload.success() was called');
+        chai.assert.deepEqual(spy.args[0], expected);
+      });
 
-      it ( 'Success() method should be called with (type, payload, meta, store)', async () => {
+      it('Success() method should be called with (type, payload, meta, store)', async () => {
         stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
-            status: 200
-          }
-        })
+            status: 200,
+          },
+        });
 
-        const spy = sinon.spy()
+        const spy = sinon.spy();
 
         const action = {
           type: 'API',
           types: [
             'FETCH_USER',
             'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
+            'FETCH_USER_FAILED',
           ],
           payload: () => ({
             url: '/users/fetch',
             success: spy,
-            auth: true
+            auth: true,
           }),
           meta: {
             args: {
-              extraParameter: 'This is an extra param!'
-            }
-          }
-        }
+              extraParameter: 'This is an extra param!',
+            },
+          },
+        };
 
         const expected = [
           // type
@@ -1584,93 +1576,93 @@ describe( 'shapeshifter middleware', () => {
           // payload
           {
             user: { name: 'Alejandro' },
-            status: 200
+            status: 200,
           },
           // meta
           {
             args: {
-              extraParameter: 'This is an extra param!'
-            }
+              extraParameter: 'This is an extra param!',
+            },
           },
           // store
           {
             dispatch: store.dispatch,
             getState: store.getState,
-            state: store.getState()
-          }
-        ]
+            state: store.getState(),
+          },
+        ];
 
-        await dispatch( action )
-        await flushPromises()
+        await dispatch(action);
+        await flushPromises();
 
-        chai.assert.isTrue( spy.called )
-        chai.assert.deepEqual( spy.args[ 0 ], expected )
-      } )
+        chai.assert.isTrue(spy.called);
+        chai.assert.deepEqual(spy.args[0], expected);
+      });
 
-      it ( 'Should be fine with 204 status (empty response)', async () => {
+      it('Should be fine with 204 status (empty response)', async () => {
         stubApiResponse({
           data: {
             error: null,
             errors: null,
             message: 'No upcoming and confirmed lessons found.',
-            status: 204
-          }
-        })
+            status: 204,
+          },
+        });
 
-        const spy = sinon.spy()
+        const spy = sinon.spy();
 
         const action = {
           type: 'API',
           types: [
             'FETCH_NEXT_CLASS',
             'FETCH_NEXT_CLASS_SUCCESS',
-            'FETCH_NEXT_CLASS_FAILED'
+            'FETCH_NEXT_CLASS_FAILED',
           ],
           payload: () => ({
             url: '/bookings/123/nextClass',
             success: spy,
-            auth: true
+            auth: true,
           }),
-        }
+        };
 
-        await dispatch( action )
-        await flushPromises()
+        await dispatch(action);
+        await flushPromises();
 
-        chai.assert.isTrue( spy.called )
-      } )
+        chai.assert.isTrue(spy.called);
+      });
 
-      it ( 'Merge params to meta parameter', async () => {
+      it('Merge params to meta parameter', async () => {
         stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
-            status: 200
-          }
-        })
+            status: 200,
+          },
+        });
 
-        const spy = sinon.spy()
+        const spy = sinon.spy();
 
         const action = {
           type: 'API',
           types: [
             'FETCH_USER',
             'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
+            'FETCH_USER_FAILED',
           ],
           payload: () => ({
             url: '/users/fetch',
             params: {
-              userName: 'dawaa'
+              userName: 'dawaa',
             },
             success: spy,
-            auth: true
+            auth: true,
           }),
           meta: {
             mergeParams: true,
             args: {
-              extraParameter: 'This is an extra param!'
-            }
-          }
-        }
+              extraParameter: 'This is an extra param!',
+            },
+          },
+        };
 
         const expected = [
           // type
@@ -1678,394 +1670,397 @@ describe( 'shapeshifter middleware', () => {
           // payload
           {
             user: { name: 'Alejandro' },
-            status: 200
+            status: 200,
           },
           // meta
           {
             mergeParams: true,
             params: {
-              userName    : 'dawaa',
-              sessionid   : 'abc123',
+              userName: 'dawaa',
+              sessionid: 'abc123',
             },
             args: {
-              extraParameter: 'This is an extra param!'
-            }
+              extraParameter: 'This is an extra param!',
+            },
           },
           // store
           {
             dispatch: store.dispatch,
             getState: store.getState,
-            state: store.getState()
-          }
-        ]
+            state: store.getState(),
+          },
+        ];
 
-        await dispatch( action )
-        await flushPromises()
+        await dispatch(action);
+        await flushPromises();
 
-        chai.assert.isTrue( spy.called )
-        chai.assert.deepEqual( spy.args[ 0 ], expected )
-      } )
+        chai.assert.isTrue(spy.called);
+        chai.assert.deepEqual(spy.args[0], expected);
+      });
 
 
-      it ( 'Dispatch basic user firstName', async () => {
+      it('Dispatch basic user firstName', async () => {
         const stub = stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
-            status: 200
-          }
-        })
+            status: 200,
+          },
+        });
 
         const action = {
           type: 'API',
           types: [
             'FETCH_USER',
             'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
+            'FETCH_USER_FAILED',
           ],
           payload: () => ({
             url: '/users/fetch',
             success: (type, { user: { name } }) => ({
               type,
-              firstName: name
+              firstName: name,
             }),
-            auth: true
-          })
-        }
+            auth: true,
+          }),
+        };
 
         const expected = {
           action: {
             type: 'FETCH_USER_SUCCESS',
-            firstName: 'Alejandro'
+            firstName: 'Alejandro',
           },
           args: {
             method: 'get',
             url: 'http://some.api/v1/users/fetch',
             params: {
-              sessionid   : 'abc123',
+              sessionid: 'abc123',
             },
-            cancelToken : mockToken,
-          }
-        }
-
-        await dispatch( action )
-        await flushPromises()
-
-        chai.assert.isTrue( store.dispatch.called )
-        chai.assert.isTrue( store.dispatch.calledWith( expected.action ) )
-        chai.assert.deepEqual( stub.args[ 0 ][ 0 ], expected.args )
-      } )
-
-      it ( 'Should run tapBeforeCall()', async () => {
-        stubApiResponse({
-          data: {
-            user: { name: 'Alejandro' },
-            status: 200
-          }
-        })
-
-        const spy = sinon.spy()
-
-        const action = {
-          type: 'API',
-          types: [
-            'FETCH_USER',
-            'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
-          ],
-          payload: () => ({
-            url: '/users/fetch',
-            params: {
-              randomThought: 'Shower is taking a stand up bath'
-            },
-            tapBeforeCall: (store) => {
-              spy(store)
-            },
-            success: (type, { user: { name } }) => ({
-              type,
-              firstName: name
-            }),
-            auth: true
-          })
-        }
-
-        const expectedParams = {
-          params: {
-            randomThought : 'Shower is taking a stand up bath',
-            sessionid     : 'abc123',
+            cancelToken: mockToken,
           },
-          dispatch: store.dispatch,
-          state: store.getState(),
-          getState: store.getState
-        }
+        };
 
-        await dispatch( action )
-        await flushPromises()
+        await dispatch(action);
+        await flushPromises();
 
-        chai.assert.isTrue( spy.called )
-        chai.assert.isTrue( spy.calledOnce )
-        chai.assert.deepEqual( spy.args[ 0 ][ 0 ], expectedParams )
-      } )
+        chai.assert.isTrue(store.dispatch.called);
+        chai.assert.isTrue(store.dispatch.calledWith(expected.action));
+        chai.assert.deepEqual(stub.args[0][0], expected.args);
+      });
 
-      it ( 'Should succeed on a custom success response', async () => {
-        setupMiddleware({
-          base: 'http://some.api/v1',
-          customSuccessResponses: [ 'success' ],
-        })
-
-        stubApiResponse({
-          data: {
-            status: 'success'
-          },
-          status: 200
-        })
-
-        const successSpy = sinon.spy()
-        const action = {
-          ...createApiAction( 'FETCH_USER' ),
-          payload: () => ({
-            url: '/users/fetch',
-            success: successSpy
-          })
-        }
-
-        await dispatch( action )
-        await flushPromises()
-
-        assert.isTrue(
-          store.dispatch.calledOnce,
-          'store.dispatch() should have been called.'
-        )
-        assert.isTrue(
-          successSpy.calledOnce,
-          'success() method should have been called.'
-        )
-      } )
-    } )
-
-    describe( 'Successful API calls generators', () => {
-      it ( 'Not a valid generator funciton', () => {
-        const fn = () => {}
-        chai.assert.isFalse( isGeneratorFn( fn ) )
-      } )
-
-      it ( 'Valid generator function', () => {
-        const fn = function* () {}
-        chai.assert.isTrue( isGeneratorFn( fn ) )
-      } )
-
-      it ( 'Success generator function should yield API_VOID', async () => {
-        stubApiResponse({
-          data: {
-            user: { name: 'Alejandro' },
-            status: 200
-          }
-        })
-
-        const action = {
-          type: 'API',
-          types: [
-            'FETCH_USER',
-            'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
-          ],
-          payload: () => ({
-            url: '/users/fetch',
-            success: function* (type, payload) {
-              const string  = yield "A string"
-            },
-            auth: true
-          })
-        }
-
-        const expected = {
-          type: 'API_VOID',
-          LAST_ACTION: 'FETCH_USER'
-        }
-
-        await dispatch( action )
-        await flushPromises()
-
-        chai.assert.isTrue( store.dispatch.called )
-        chai.assert.deepEqual( store.dispatch.args[ 0 ][ 0 ], expected )
-      } )
-
-      it ( 'should yield SUCCESS with payload', async () => {
+      it('Should run tapBeforeCall()', async () => {
         stubApiResponse({
           data: {
             user: { name: 'Alejandro' },
             status: 200,
-          }
-        })
+          },
+        });
+
+        const spy = sinon.spy();
 
         const action = {
           type: 'API',
           types: [
             'FETCH_USER',
             'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
+            'FETCH_USER_FAILED',
           ],
           payload: () => ({
             url: '/users/fetch',
-            success: function* (type, { user }) {
-              const fakePayload = { data: { user: { id: 1 }} }
-              const response    = yield new Promise(r => r( fakePayload ))
-
-              return {
-                type,
-                id: response.data.user.id
-              }
+            params: {
+              randomThought: 'Shower is taking a stand up bath',
             },
-            auth: true
-          })
-        }
+            tapBeforeCall: (_store) => {
+              spy(_store);
+            },
+            success: (type, { user: { name } }) => ({
+              type,
+              firstName: name,
+            }),
+            auth: true,
+          }),
+        };
 
-        const expected = {
-          type: 'FETCH_USER_SUCCESS',
-          id: 1
-        }
+        const expectedParams = {
+          params: {
+            randomThought: 'Shower is taking a stand up bath',
+            sessionid: 'abc123',
+          },
+          dispatch: store.dispatch,
+          state: store.getState(),
+          getState: store.getState,
+        };
 
-        await dispatch( action )
-        await flushPromises()
+        await dispatch(action);
+        await flushPromises();
 
-        chai.assert.isTrue( store.dispatch.called, 'store.dispatch() was called' )
-        chai.assert.deepEqual(
-          store.dispatch.args[ 0 ][ 0 ],
-          expected,
-          'Dispatch params match expected literal object'
-        )
-      } )
+        chai.assert.isTrue(spy.called);
+        chai.assert.isTrue(spy.calledOnce);
+        chai.assert.deepEqual(spy.args[0][0], expectedParams);
+      });
 
-      it ( 'Success generator function should dispatch multiple actions and return VOID', async () => {
+      it('Should succeed on a custom success response', async () => {
+        setupMiddleware({
+          base: 'http://some.api/v1',
+          customSuccessResponses: ['success'],
+        });
+
         stubApiResponse({
           data: {
-            user: { name: 'Alejandro', id: 1 },
-            status: 200
-          }
-        })
+            status: 'success',
+          },
+          status: 200,
+        });
 
+        const successSpy = sinon.spy();
         const action = {
-          type: 'API',
-          types: [
-            'FETCH_USER',
-            'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
-          ],
+          ...createApiAction('FETCH_USER'),
           payload: () => ({
             url: '/users/fetch',
-            success: function* (type, { user }, { dispatch, state }) {
-              dispatch({ type: 'FETCH_AVATAR', sessionid: state.user.sessionid })
-              dispatch({ type: 'FETCH_MESSAGES', id: user.id })
-              dispatch({ type: 'FETCH_TEACHERS' })
-            },
-            auth: true
-          })
-        }
+            success: successSpy,
+          }),
+        };
 
-        const expected = {
-          type: 'API_VOID',
-          LAST_ACTION: 'FETCH_USER'
-        }
+        await dispatch(action);
+        await flushPromises();
 
-        await dispatch( action )
-        await flushPromises()
+        assert.isTrue(
+          store.dispatch.calledOnce,
+          'store.dispatch() should have been called.',
+        );
+        assert.isTrue(
+          successSpy.calledOnce,
+          'success() method should have been called.',
+        );
+      });
+    });
 
-        chai.assert.strictEqual( store.dispatch.callCount, 4 )
-        chai.assert.deepEqual(
-          store.dispatch.getCall( 0 ).args[ 0 ],
-          {
-            type: 'FETCH_AVATAR',
-            sessionid: 'abc123'
-          }
-        )
-        chai.assert.deepEqual(
-          store.dispatch.getCall( 1 ).args[ 0 ],
-          {
-            type: 'FETCH_MESSAGES',
-            id: 1
-          }
-        )
-        chai.assert.deepEqual(
-          store.dispatch.getCall( 2 ).args[ 0 ],
-          {
-            type: 'FETCH_TEACHERS'
-          }
-        )
-        chai.assert.deepEqual( store.dispatch.lastCall.args[ 0 ], expected )
-      } )
+    describe('Successful API calls generators', () => {
+      it('Not a valid generator funciton', () => {
+        const fn = () => {};
+        chai.assert.isFalse(isGeneratorFn(fn));
+      });
 
-      it ( 'Success generator function should throw error and not call dispatch', async () => {
-        stubApiResponse({ data: { status: 200 } })
-        const mock = sandbox.mock( console )
+      it('Valid generator function', () => {
+        const fn = function* () {};
+        chai.assert.isTrue(isGeneratorFn(fn));
+      });
 
-        mock.expects( 'error' ).once();
+      it('Success generator function should yield API_VOID', async () => {
+        stubApiResponse({
+          data: {
+            user: { name: 'Alejandro' },
+            status: 200,
+          },
+        });
 
         const action = {
           type: 'API',
           types: [
             'FETCH_USER',
             'FETCH_USER_SUCCESS',
-            'FETCH_USER_FAILED'
+            'FETCH_USER_FAILED',
           ],
           payload: () => ({
             url: '/users/fetch',
             success: function* () {
-              yield () => { throw 'Ugh' }
             },
-            auth: true
-          })
-        }
+            auth: true,
+          }),
+        };
 
-        await dispatch( action )
-        await flushPromises()
+        const expected = {
+          type: 'API_VOID',
+          LAST_ACTION: 'FETCH_USER',
+        };
 
-        chai.assert.isTrue( store.dispatch.notCalled )
-        chai.assert.isTrue( mock.verify() )
-      } )
-    } )
+        await dispatch(action);
+        await flushPromises();
 
-  } )
+        chai.assert.isTrue(store.dispatch.called);
+        chai.assert.deepEqual(store.dispatch.args[0][0], expected);
+      });
 
-  describe ( 'Repeat API calls', () => {
-    it ( 'should repeatedly call an endpoint and resolve on boolean (true)', async () => {
-      sandbox.stub( axios, 'request' )
-        .onCall( 0 ).resolves({ status: 200, data: { isOnline: false } })
-        .onCall( 1 ).resolves({ status: 200, data: { isOnline: false } })
-        .onCall( 2 ).resolves({ status: 200, data: { isOnline: true } })
+      it('should yield SUCCESS with payload', async () => {
+        stubApiResponse({
+          data: {
+            user: { name: 'Alejandro' },
+            status: 200,
+          },
+        });
 
-      const tickSpy = sinon.spy()
-      const successSpy = sinon.spy()
+        const action = {
+          type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED',
+          ],
+          payload: () => ({
+            url: '/users/fetch',
+            success: function* (type) {
+              const fakePayload = { data: { user: { id: 1 } } };
+              const response = yield new Promise((r) => r(fakePayload));
+
+              return {
+                type,
+                id: response.data.user.id,
+              };
+            },
+            auth: true,
+          }),
+        };
+
+        const expected = {
+          type: 'FETCH_USER_SUCCESS',
+          id: 1,
+        };
+
+        await dispatch(action);
+        await flushPromises();
+
+        chai.assert.isTrue(store.dispatch.called, 'store.dispatch() was called');
+        chai.assert.deepEqual(
+          store.dispatch.args[0][0],
+          expected,
+          'Dispatch params match expected literal object',
+        );
+      });
+
+      it('Success generator function should dispatch multiple actions and return VOID', async () => {
+        stubApiResponse({
+          data: {
+            user: { name: 'Alejandro', id: 1 },
+            status: 200,
+          },
+        });
+
+        const action = {
+          type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED',
+          ],
+          payload: () => ({
+            url: '/users/fetch',
+            // eslint-disable-next-line require-yield
+            success: function* (type, { user }, { state }) {
+              dispatch({ type: 'FETCH_AVATAR', sessionid: state.user.sessionid });
+              dispatch({ type: 'FETCH_MESSAGES', id: user.id });
+              dispatch({ type: 'FETCH_TEACHERS' });
+            },
+            auth: true,
+          }),
+        };
+
+        const expected = {
+          type: 'API_VOID',
+          LAST_ACTION: 'FETCH_USER',
+        };
+
+        await dispatch(action);
+        await flushPromises();
+
+        chai.assert.strictEqual(store.dispatch.callCount, 4);
+        chai.assert.deepEqual(
+          store.dispatch.getCall(0).args[0],
+          {
+            type: 'FETCH_AVATAR',
+            sessionid: 'abc123',
+          },
+        );
+        chai.assert.deepEqual(
+          store.dispatch.getCall(1).args[0],
+          {
+            type: 'FETCH_MESSAGES',
+            id: 1,
+          },
+        );
+        chai.assert.deepEqual(
+          store.dispatch.getCall(2).args[0],
+          {
+            type: 'FETCH_TEACHERS',
+          },
+        );
+        chai.assert.deepEqual(store.dispatch.lastCall.args[0], expected);
+      });
+
+      it('Success generator function should throw error and not call dispatch', async () => {
+        stubApiResponse({ data: { status: 200 } });
+        const mock = sandbox.mock(console);
+
+        mock.expects('error').once();
+
+        const action = {
+          type: 'API',
+          types: [
+            'FETCH_USER',
+            'FETCH_USER_SUCCESS',
+            'FETCH_USER_FAILED',
+          ],
+          payload: () => ({
+            url: '/users/fetch',
+            success: function* () {
+              // eslint-disable-next-line no-throw-literal
+              yield () => { throw 'Ugh'; };
+            },
+            auth: true,
+          }),
+        };
+
+        await dispatch(action);
+        await flushPromises();
+
+        chai.assert.isTrue(store.dispatch.notCalled);
+        chai.assert.isTrue(mock.verify());
+      });
+    });
+  });
+
+  describe('Repeat API calls', () => {
+    it('should repeatedly call an endpoint and resolve on boolean (true)', async () => {
+      sandbox.stub(axios, 'request')
+        .onCall(0).resolves({ status: 200, data: { isOnline: false } })
+        .onCall(1)
+        .resolves({ status: 200, data: { isOnline: false } })
+        .onCall(2)
+        .resolves({ status: 200, data: { isOnline: true } });
+
+      const tickSpy = sinon.spy();
+      const successSpy = sinon.spy();
 
       const action = {
-        ...createApiAction( 'FETCH_USER' ),
+        ...createApiAction('FETCH_USER'),
         payload: () => ({
           url: '/users/fetch',
           success: successSpy,
-          repeat: (response, resolve, reject) => {
-            tickSpy()
-            if ( response.data.isOnline ) {
-              return true
+          repeat: (response) => {
+            tickSpy();
+            if (response.data.isOnline) {
+              return true;
             }
+            return undefined;
           },
           interval: 10,
           useFullResponseObject: true,
-        })
-      }
+        }),
+      };
 
-      await dispatch( action )
-      await flushPromises()
+      await dispatch(action);
+      await flushPromises();
 
-      await new Promise(r => setTimeout(r, 10))
-      await flushPromises()
+      await new Promise((r) => setTimeout(r, 10));
+      await flushPromises();
 
       chai.assert.strictEqual(
         tickSpy.callCount,
         2,
         'Should tick twice before isOnline is true',
-      )
+      );
       chai.assert.isTrue(
         successSpy.called,
         'Success should\'ve been called after two ticks',
-      )
+      );
       chai.assert.isTrue(
         successSpy.calledWith(
           'FETCH_USER_SUCCESS',
@@ -2074,85 +2069,93 @@ describe( 'shapeshifter middleware', () => {
             state: store.getState(),
             getState: store.getState,
             dispatch: store.dispatch,
-          }
-        )
-      )
-    } )
+          },
+        ),
+      );
+    });
 
-    it ( 'should repeatedly call an endpoint and reject on boolean (false)', async () => {
-      const mock = sandbox.mock( console ).expects( 'error' ).once()
-      sandbox.stub( axios, 'request' )
-        .onCall( 0 ).resolves({ status: 200, data: { isOnline: true } })
-        .onCall( 1 ).resolves({ status: 200, data: { isOnline: true } })
-        .onCall( 2 ).resolves({ status: 200, data: { isOnline: false } })
+    it('should repeatedly call an endpoint and reject on boolean (false)', async () => {
+      const mock = sandbox.mock(console).expects('error').once();
+      sandbox.stub(axios, 'request')
+        .onCall(0).resolves({ status: 200, data: { isOnline: true } })
+        .onCall(1)
+        .resolves({ status: 200, data: { isOnline: true } })
+        .onCall(2)
+        .resolves({ status: 200, data: { isOnline: false } });
 
-      const tickSpy = sinon.spy()
-      const failureSpy = sinon.spy()
+      const tickSpy = sinon.spy();
+      const failureSpy = sinon.spy();
 
       const action = {
-        ...createApiAction( 'FETCH_USER' ),
+        ...createApiAction('FETCH_USER'),
         payload: () => ({
           url: '/users/fetch',
           failure: failureSpy,
-          repeat: (response, resolve, reject) => {
-            tickSpy()
-            if ( !response.data.isOnline ) {
-              return false
+          repeat: (response) => {
+            tickSpy();
+            if (!response.data.isOnline) {
+              return false;
             }
+
+            return undefined;
           },
           interval: 10,
-        })
-      }
+        }),
+      };
 
-      await assert.isFulfilled(dispatch( action ))
+      await assert.isFulfilled(dispatch(action));
       chai.assert.strictEqual(
         tickSpy.callCount,
         2,
         'Should tick twice before isOnline is false',
-      )
+      );
       chai.assert.isTrue(
         failureSpy.called,
         'Failure should\'ve been called after two ticks',
-      )
-      mock.verify()
-    } )
+      );
+      mock.verify();
+    });
 
-    it ( 'should repeatedly call an endpoint and resolve with custom data', async () => {
-      sandbox.stub( axios, 'request' )
-        .onCall( 0 ).resolves({ status: 200, data: { isOnline: false } })
-        .onCall( 1 ).resolves({ status: 200, data: { isOnline: false } })
-        .onCall( 2 ).resolves({ status: 200, data: { isOnline: true } })
+    it('should repeatedly call an endpoint and resolve with custom data', async () => {
+      sandbox.stub(axios, 'request')
+        .onCall(0).resolves({ status: 200, data: { isOnline: false } })
+        .onCall(1)
+        .resolves({ status: 200, data: { isOnline: false } })
+        .onCall(2)
+        .resolves({ status: 200, data: { isOnline: true } });
 
-      const tickSpy = sinon.spy()
-      const successSpy = sinon.spy()
+      const tickSpy = sinon.spy();
+      const successSpy = sinon.spy();
 
       const action = {
-        ...createApiAction( 'FETCH_USER' ),
+        ...createApiAction('FETCH_USER'),
         payload: () => ({
           url: '/users/fetch',
           success: successSpy,
-          repeat: (response, resolve, reject) => {
-            tickSpy()
-            if ( response.data.isOnline ) {
-              return resolve({ connected: true })
+          repeat: (response, resolve) => {
+            tickSpy();
+            if (response.data.isOnline) {
+              return resolve({ connected: true });
             }
+
+            return undefined;
           },
           interval: 50,
           useFullResponseObject: true,
-        })
-      }
+        }),
+      };
 
-      await dispatch( action )
-      await flushPromises()
+      await dispatch(action);
+      await flushPromises();
 
-      await new Promise(r => setTimeout(r, 100))
-      await flushPromises()
+      await new Promise((r) => setTimeout(r, 100));
+      await flushPromises();
 
       chai.assert.strictEqual(
         tickSpy.callCount,
         2,
         'Should tick twice before isOnline is true',
-      )
+      );
       chai.assert.isTrue(
         successSpy.calledWith(
           'FETCH_USER_SUCCESS',
@@ -2161,49 +2164,52 @@ describe( 'shapeshifter middleware', () => {
             state: store.getState(),
             getState: store.getState,
             dispatch: store.dispatch,
-          }
-        )
-      )
-    } )
+          },
+        ),
+      );
+    });
 
-    it ( 'should repeatedly call an endpoint and reject with custom data', async () => {
-      const mock = sandbox.mock( console ).expects( 'error' ).once()
-      sandbox.stub( axios, 'request' )
-        .onCall( 0 ).resolves({ status: 200, data: { isOnline: true } })
-        .onCall( 1 ).resolves({ status: 200, data: { isOnline: true } })
-        .onCall( 2 ).resolves({ status: 200, data: { isOnline: false } })
+    it('should repeatedly call an endpoint and reject with custom data', async () => {
+      const mock = sandbox.mock(console).expects('error').once();
+      sandbox.stub(axios, 'request')
+        .onCall(0).resolves({ status: 200, data: { isOnline: true } })
+        .onCall(1)
+        .resolves({ status: 200, data: { isOnline: true } })
+        .onCall(2)
+        .resolves({ status: 200, data: { isOnline: false } });
 
-      const tickSpy = sinon.spy()
-      const failureSpy = sinon.spy()
+      const tickSpy = sinon.spy();
+      const failureSpy = sinon.spy();
 
       const action = {
-        ...createApiAction( 'FETCH_USER' ),
+        ...createApiAction('FETCH_USER'),
         payload: () => ({
           url: '/users/fetch',
           failure: failureSpy,
           repeat: (response, resolve, reject) => {
-            tickSpy()
-            if ( !response.data.isOnline ) {
-              return reject({ buhu: true })
+            tickSpy();
+            if (!response.data.isOnline) {
+              return reject({ buhu: true });
             }
+
+            return undefined;
           },
           interval: 10,
-        })
-      }
+        }),
+      };
 
-      await assert.isFulfilled(dispatch( action ))
+      await assert.isFulfilled(dispatch(action));
       chai.assert.strictEqual(
         tickSpy.callCount,
         2,
         'Should tick twice before isOnline is true',
-      )
+      );
       chai.assert.calledWith(
         failureSpy,
         'FETCH_USER_FAILED',
-        sinon.match.instanceOf( ResponseRepeatReject ),
-      )
-      mock.verify()
-    } )
-  } )
-
-} )
+        sinon.match.instanceOf(ResponseRepeatReject),
+      );
+      mock.verify();
+    });
+  });
+});

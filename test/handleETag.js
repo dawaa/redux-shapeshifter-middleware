@@ -60,10 +60,10 @@ describe('handleETag', () => {
 
   it('doesn\'t call dispatch due to invalid creation types', () => {
     const types = [null, undefined, [], '', 0, 1, true, false];
-    for (let type of types) {
+    for (const type of types) {
       mockContext.dispatchETagCreationType = type;
 
-      const result = handleETag(mockContext)(mockResponse);
+      handleETag(mockContext)(mockResponse);
 
       chai.assert.notCalled(mockContext.dispatch);
     }

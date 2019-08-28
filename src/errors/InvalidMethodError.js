@@ -1,7 +1,7 @@
 function InvalidMethodError(message) {
-  this.name = 'InvalidMethodError'
-  this.message = message
-  this.stack = Error().stack
+  this.name = 'InvalidMethodError';
+  this.message = message;
+  this.stack = Error().stack;
 }
 
-export default InvalidMethodError
+export default InvalidMethodError;

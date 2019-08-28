@@ -1,7 +1,7 @@
 function ResponseNotModified(message) {
-  this.name = 'ResponseNotModified'
-  this.message = message
-  this.stack = Error().stack
+  this.name = 'ResponseNotModified';
+  this.message = message;
+  this.stack = Error().stack;
 }
 
-export default ResponseNotModified
+export default ResponseNotModified;

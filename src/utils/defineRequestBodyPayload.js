@@ -1,11 +1,10 @@
 import InvalidMethodError from '../errors/InvalidMethodError';
-import defined from './defined';
-import optional from './optional';
 
-const methods = [ 'get', 'delete', 'post', 'put', 'patch' ]
-const bodyMethods = methods.filter( m => m != 'get' )
+const methods = ['get', 'delete', 'post', 'put', 'patch'];
+const bodyMethods = methods.filter((m) => m !== 'get');
 
 export default (method, parameters = {}) => (
+  // eslint-disable-next-line no-nested-ternary
   method && methods.includes(method)
     ? (
       bodyMethods.includes(method)
@@ -13,4 +12,4 @@ export default (method, parameters = {}) => (
         : { params: parameters }
     )
     : new InvalidMethodError(`Expected method to be any of the following methods: ${methods}, got instead ${method}`)
-)
+);

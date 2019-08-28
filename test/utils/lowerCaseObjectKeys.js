@@ -5,7 +5,7 @@ import lowerCaseObjectKeys from '../../src/utils/lowerCaseObjectKeys';
 describe('lowerCaseObjectKeys', () => {
   it('returns error on wrong type', () => {
     const types = [null, undefined, [], '', 'str', 0, 1, true, false];
-    for (let type of types) {
+    for (const type of types) {
       const result = lowerCaseObjectKeys(type);
       chai.assert.instanceOf(result, TypeError);
     }

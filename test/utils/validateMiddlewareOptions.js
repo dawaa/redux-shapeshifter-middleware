@@ -1,7 +1,7 @@
-import chai from 'chai'
+import chai from 'chai';
 
-import MiddlewareOptionsValidationError from '../../src/errors/MiddlewareOptionsValidationError'
-import validateMiddlewareOptions from '../../src/utils/validateMiddlewareOptions'
+import MiddlewareOptionsValidationError from '../../src/errors/MiddlewareOptionsValidationError';
+import validateMiddlewareOptions from '../../src/utils/validateMiddlewareOptions';
 
 describe('validateMiddlewareOptions', () => {
   const mandatoryOpts = {

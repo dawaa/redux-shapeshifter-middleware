@@ -3,7 +3,7 @@ import MalformedShapeshifterAction from '../errors/MalformedShapeshifterAction';
 import defined from './defined';
 import optional from './optional';
 
-export default shapeshifterType => action => {
+export default (shapeshifterType) => (action) => {
   const errors = [];
 
   const addError = (opt, type, value) => errors.push(
@@ -24,12 +24,10 @@ export default shapeshifterType => action => {
 
   if (!defined(action.types, Array)) {
     addError('types', 'Array', action.types);
-  } else {
-    if (action.types.length !== 3) {
-      errors.push(
-        `\n - action.types should contain a Neutral, Success and Failure types`,
-      );
-    }
+  } else if (action.types.length !== 3) {
+    errors.push(
+      '\n - action.types should contain a Neutral, Success and Failure types',
+    );
   }
 
   if (!defined((action.method || 'get'), String)) {

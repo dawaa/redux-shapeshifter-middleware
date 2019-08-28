@@ -1,6 +1,6 @@
-import chai from 'chai'
+import chai from 'chai';
 
-import defined from '../../src/utils/defined'
+import defined from '../../src/utils/defined';
 
 describe('defined', () => {
   it('invalidates null', () => {
@@ -13,7 +13,7 @@ describe('defined', () => {
 
   it('invalidates wrong type', () => {
     chai.assert.isFalse(defined(1, String));
-  })
+  });
 
   it('invalidates correct type but wrong expectation', () => {
     chai.assert.isFalse(defined(1, Number, '1'));

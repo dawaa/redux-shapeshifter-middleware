@@ -1,7 +1,7 @@
 function ResponseWithErrors(message) {
-  this.name = 'ResponseWithErrors'
-  this.message = message
-  this.stack = Error().stack
+  this.name = 'ResponseWithErrors';
+  this.message = message;
+  this.stack = Error().stack;
 }
 
-export default ResponseWithErrors
+export default ResponseWithErrors;

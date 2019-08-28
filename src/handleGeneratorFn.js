@@ -1,82 +1,88 @@
-import { middlewareOpts }  from './middleware'
-import { removeFromStack } from './callStack'
+import options from './options';
+import { removeFromStack } from './callStack';
 
-export default store => next => response => ({ success, types, meta }) => {
+export default (store) => (next) => (response) => ({ success, types, meta }) => {
   const {
     constants: {
       API_VOID,
     },
-  } = middlewareOpts
+  } = options;
 
   const {
     REQUEST,
     SUCCESS,
-  } = types
+  } = types;
 
   return new Promise((resolve, reject) => {
-    let gen = success(
+    const gen = success(
       SUCCESS,
       response.data,
       meta,
       (meta.getState && typeof meta.getState === 'function' ? null : store),
-    )
+    );
 
-    const _resolve = data => {
+    // eslint-disable-next-line no-underscore-dangle
+    const _resolve = (data) => {
       try {
-        let it = gen.next( data )
-        _iterate( it )
+        const it = gen.next(data);
+        // eslint-disable-next-line no-use-before-define
+        _iterate(it);
       } catch (e) {
-        reject( e )
+        reject(e);
       }
-    }
+    };
 
-    const _reject = error => {
+    // eslint-disable-next-line no-underscore-dangle
+    const _reject = (error) => {
       try {
-        _iterate( gen.throw( error ) )
+        // eslint-disable-next-line no-use-before-define
+        _iterate(gen.throw(error));
       } catch (e) {
-        reject( e )
+        reject(e);
       }
-    }
+    };
 
-    const _iterate = it => {
-      let { done, value } = it || {}
+    // eslint-disable-next-line no-underscore-dangle, consistent-return
+    const _iterate = (it) => {
+      const { done, value } = it || {};
 
-      if ( done === true ) {
+      if (done === true) {
         // Remove call from callStack when finished
-        removeFromStack( REQUEST )
+        removeFromStack(REQUEST);
 
-        if ( value === undefined ) {
-          return resolve({ type: API_VOID, LAST_ACTION: REQUEST })
+        if (value === undefined) {
+          return resolve({ type: API_VOID, LAST_ACTION: REQUEST });
         }
 
-        return resolve( value )
+        return resolve(value);
       }
 
       // If we are dealing with a generator function
-      if ( value.then && typeof value.then === 'function' ) {
-        Promise.resolve( value ).then( _resolve, _reject )
+      if (value.then && typeof value.then === 'function') {
+        Promise.resolve(value).then(_resolve, _reject);
 
         // If value is function
-      } else if ( typeof value === 'function' ) {
+      } else if (typeof value === 'function') {
         try {
-          _resolve( value() )
+          _resolve(value());
         } catch (e) {
-          _reject( e )
+          _reject(e);
         }
 
         // If all else fails
       } else {
-        _resolve( value )
+        _resolve(value);
       }
-    }
+    };
 
     // Kick it Stevie Wonder!
-    _resolve()
+    _resolve();
   })
-    .then( next, error => {
+    .then(next, (error) => {
       // Remove call from callStack when finished
-      removeFromStack( REQUEST )
+      removeFromStack(REQUEST);
 
-      console.error( `Generator ACTION had an error ==> ${ error }` )
-    } )
-}
+      // eslint-disable-next-line no-console
+      console.error(`Generator ACTION had an error ==> ${error}`);
+    });
+};

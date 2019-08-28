@@ -1,12 +1,12 @@
 import defined from './utils/defined';
 import lowerCaseObjectKeys from './utils/lowerCaseObjectKeys';
 
-const parseableHeaders = headers => (
+const parseableHeaders = (headers) => (
   headers != null
   || (!!headers && headers.constructor === Object && Object.keys(headers).length)
-)
+);
 
-export default (context = {}) => response => {
+export default (context = {}) => (response) => {
   const {
     dispatch,
     path,
@@ -23,7 +23,8 @@ export default (context = {}) => response => {
   const normalizedHeaders = lowerCaseObjectKeys(headers);
 
   if (normalizedHeaders instanceof Error) {
-    console.warn(normalizedHeaders)
+    // eslint-disable-next-line no-console
+    console.warn(normalizedHeaders);
     return response;
   }
 
@@ -40,4 +41,4 @@ export default (context = {}) => response => {
   }
 
   return response;
-}
+};

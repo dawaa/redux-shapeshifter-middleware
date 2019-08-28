@@ -1,6 +1,6 @@
-import chai from 'chai'
+import chai from 'chai';
 
-import optional from '../../src/utils/optional'
+import optional from '../../src/utils/optional';
 
 describe('optional', () => {
   it('validates null', () => {
