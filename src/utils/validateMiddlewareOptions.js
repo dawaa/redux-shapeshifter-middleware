@@ -75,6 +75,10 @@ export default (opts = {}) => {
     addError('warnOnCancellation', 'Boolean', opts.warnOnCancellation);
   }
 
+  if (!optional(opts.axios, Object)) {
+    addError('axios', 'Object', opts.axios);
+  }
+
   if (errors.length) {
     return new MiddlewareOptionsValidationError(errors.join(''), errors);
   }
