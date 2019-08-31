@@ -112,6 +112,11 @@ const middleware = (middlewareOptions) => {
         },
       } = action;
 
+      const customAxiosConfig = {
+        ...middlewareOpts.axios,
+        ...axiosConfig,
+      };
+
       if (useFullResponseObject != null && useFullResponseObject.constructor !== Boolean) {
         throw new Error(
           `action.payload.useFullResponseObject is expected to be of type Boolean, got instead ${useFullResponseObject}`,
@@ -119,7 +124,7 @@ const middleware = (middlewareOptions) => {
       }
 
       if (middlewareOpts.useETags && urlETags[uris]) {
-        axiosConfig.headers = axiosConfig.headers || {};
+        customAxiosConfig.headers = customAxiosConfig.headers || {};
         if (middlewareOpts.matchingETagHeaders
           && middlewareOpts.matchingETagHeaders.constructor === Function) {
           const ETagHeaders = middlewareOpts.matchingETagHeaders({
@@ -135,13 +140,13 @@ const middleware = (middlewareOptions) => {
             );
           }
 
-          axiosConfig.headers = {
-            ...axiosConfig.headers,
+          customAxiosConfig.headers = {
+            ...customAxiosConfig.headers,
             ...ETagHeaders,
           };
         } else {
-          axiosConfig.headers['If-None-Match'] = urlETags[uris];
-          axiosConfig.headers['Cache-Control'] = 'private, must-revalidate';
+          customAxiosConfig.headers['If-None-Match'] = urlETags[uris];
+          customAxiosConfig.headers['Cache-Control'] = 'private, must-revalidate';
         }
       }
 
@@ -217,13 +222,12 @@ const middleware = (middlewareOptions) => {
       }
 
       const config = {
-
-        ...axiosConfig,
+        ...customAxiosConfig,
         ...(
-          axiosConfig.headers || authHeaders
+          customAxiosConfig.headers || authHeaders
             ? {
               headers: {
-                ...(axiosConfig.headers ? axiosConfig.headers : {}),
+                ...(customAxiosConfig.headers ? customAxiosConfig.headers : {}),
                 ...(authHeaders ? middlewareOpts.auth.headers : {}),
               },
             }

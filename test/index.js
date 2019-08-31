@@ -266,6 +266,80 @@ describe('shapeshifter middleware', () => {
     );
   });
 
+  it('should correctly affect ACTIONs on middleware.axios config', async () => {
+    const axiosOpts = {
+      baseURL: 'http://test.base',
+      headers: {
+        'custom-header': 'very customer yaaaas',
+      },
+      params: {
+        id: 1,
+        user: 'dawaa',
+      },
+    };
+    setupMiddleware({
+      base: '',
+      axios: axiosOpts,
+    });
+    const stub = stubApiResponse({ data: { status: 200 } });
+    const action = {
+      ...createApiAction('FETCH_USER'),
+      payload: () => ({
+        url: '/users/fetch',
+      }),
+    };
+    const expected = {
+      ...axiosOpts,
+      method: 'get',
+      url: 'http://test.base/users/fetch',
+      cancelToken: mockToken,
+    };
+
+    await dispatch(action);
+    await flushPromises();
+
+    chai.assert.deepEqual(
+      expected,
+      stub.args[0][0],
+      'Should add Axios config to our config/params parameter in our Axios call',
+    );
+  });
+
+  it('should let ACTION.axios take precedence over middleware.axios', async () => {
+    setupMiddleware({
+      base: '',
+      axios: {
+        baseURL: 'http://test.base',
+      },
+    });
+    const stub = stubApiResponse({ data: { status: 200 } });
+    const action = {
+      ...createApiAction('FETCH_USER'),
+      payload: () => ({
+        url: '/users/fetch',
+      }),
+      axios: {
+        baseURL: 'http://another-url.com',
+      },
+    };
+
+    const expected = {
+      ...action.axios,
+      method: 'get',
+      url: 'http://another-url.com/users/fetch',
+      params: {},
+    };
+
+    await dispatch(action);
+    await flushPromises();
+
+    chai.assert.deepEqual(
+      expected,
+      stub.args[0][0],
+      'Should add Axios config to our config/params parameter in our Axios call',
+    );
+  });
+
   it('should correctly merge headers if auth is also passed', async () => {
     setupMiddleware({
       base: 'http://some.api/v1',

@@ -23,6 +23,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
     * [emitRequestType](#emitrequesttype-boolean)
     * [useFullResponseObject](#usefullresponseobject-boolean)
     * [warnOnCancellation](#warnoncancellation-boolean)
+    * [axios](#axios-object)
 * [Action properties](#action-properties)
     * [type](#actiontype-string)
     * [types](#actiontypes-array)
@@ -404,6 +405,14 @@ However if you're only interested in some actions returning the full `response` 
 _`default: false`_
 
 By default when cancelling `axios` calls the dependency itself will throw an error with a user-defined reason to why it was canceled. This behavior could be unwanted if let's say you're using an error-catching framework that records and logs all client errors that occurs in production for users. It's not likely that everyone would consider a canceled call "serious" enough to be an error. In this case configuring this option to `true` then only a `console.warn(reason)` will be emitted to the console.
+
+#### `axios <object>`
+_`default: undefined`_
+
+**Note**
+Any property defined under `axios` will be overridden by [`ACTION.axios`](#actionaxios-object) if the same property appears in both.
+
+In the case you want to have a global configuration for all of your ACTIONs handled by shapeshifter this is the right place to look at. What you'll be able to access through this can be seen under [Axios documentation](axios-request-config).
 
 
 

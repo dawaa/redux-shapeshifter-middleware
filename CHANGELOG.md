@@ -3,6 +3,10 @@
 ## [Unreleased]
 Future stuff...
 
+## [1.2.0] - 2019-08-31
+### Added
+- New middleware option `middleware.axios` that allows for global configuration of all shapeshifter actions. However `ACTION.axios` will override any property set through the middleware set up with the same name.
+
 ## [1.1.1] - 2019-08-28
 ### Changed
 - Accidentally published using `yarn`, silly me
@@ -66,7 +70,8 @@ Future stuff...
 - Swallowing errors. Added test case that checks if e.g. a `SyntaxError` after `success()` has been called and logs the error. At the same time we shouldn't call `failure()` neither call `dispatch()` in the `.catch()`-handler
 - Added test case that ensures if response is `304` ("Not Modified") that we won't call `dispatch()` and that we won't log it as an error
 
-[Unreleased]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.1.1...head
+[Unreleased]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.2.0...head
+[1.2.0]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.0.0...v1.0.1
