@@ -17,6 +17,7 @@ describe('validateMiddlewareOptions', () => {
     emitRequestType: false,
     useFullResponseObject: false,
     warnOnCancellation: false,
+    throwOnError: false,
   };
   const allErrorsLength = Object.keys(mandatoryOpts).length;
 

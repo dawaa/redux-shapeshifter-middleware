@@ -23,6 +23,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
     * [emitRequestType](#emitrequesttype-boolean)
     * [useFullResponseObject](#usefullresponseobject-boolean)
     * [warnOnCancellation](#warnoncancellation-boolean)
+    * [throwOnError](#throwonerror-boolean)
     * [axios](#axios-object)
 * [Action properties](#action-properties)
     * [type](#actiontype-string)
@@ -43,6 +44,7 @@ Redux middleware that will empower your _actions_ to become your go-to guy whene
             * [auth](#actionpayloadauth-boolean)
             * [ETagCallback](#actionpayloadetagcallback-objectfunction)
             * [useFullResponseObject](#actionpayloadusefullresponseobject-boolean)
+            * [throwOnError](#actionpayloadthrowonerror-boolean)
     * [meta](#actionmeta-object)
         * [mergeParams](#actionmetamergeparams-boolean)
     * [axios](#actionaxios-object)
@@ -406,6 +408,13 @@ _`default: false`_
 
 By default when cancelling `axios` calls the dependency itself will throw an error with a user-defined reason to why it was canceled. This behavior could be unwanted if let's say you're using an error-catching framework that records and logs all client errors that occurs in production for users. It's not likely that everyone would consider a canceled call "serious" enough to be an error. In this case configuring this option to `true` then only a `console.warn(reason)` will be emitted to the console.
 
+#### `throwOnError <boolean>`
+_`default: false`_
+
+By default `shapeshifter` will not bubble up errors but instead swallow them and dispatch `*_FAILURE` (or what you decide to call your failure actions) actions along with logging the error to the console. Setting this option to `true` will no longer log errors but instead throw them, which requires a `.catch()` method to be implemented to avoid `unhandled promise rejection` errors.
+
+This can also be done on [ACTION level](#actionthrowonerror-boolean) in the case you don't want _all_ actions to throw but only one or few ones.
+
 #### `axios <object>`
 _`default: undefined`_
 
@@ -682,6 +691,11 @@ If a function is provided the fuction will receive following arguments:
 _`default: false`_
 
 In the case you still want the middleware to return [`response.data`](axios-response-schema) for your other actions but only one or few should return the full [`response`](axios-response-schema) object you could set this property to `true` and the action will in it's [`success`](#actionpayloadsuccess-function)-method return the full [`response`](axios-response-schema) object.
+
+#### `ACTION.payload.throwOnError <boolean>`
+_`default: false`_
+
+By default `shapeshifter` will not bubble up errors but instead swallow them and dispatch `*_FAILURE` (or what you decide to call your failure actions) actions along with logging the error to the console. Setting this option to `true` will no longer log errors but instead throw them, which requires a `.catch()` method to be implemented to avoid `unhandled promise rejection` errors.
 
 ______________________________________________________
 

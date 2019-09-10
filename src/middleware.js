@@ -101,6 +101,7 @@ const middleware = (middlewareOptions) => {
           tapBeforeCall = undefined,
           tapAfterCall = undefined,
           useFullResponseObject = false,
+          throwOnError = false,
         },
         meta = {
           dispatch,
@@ -291,6 +292,14 @@ const middleware = (middlewareOptions) => {
         }))
         .catch((error) => {
           const isAxiosError = (error && error.isAxiosError) || false;
+          const shouldThrow = middlewareOpts.throwOnError || throwOnError;
+
+          // Remove call from callStack when finished
+          callStack.removeFromStack(REQUEST);
+
+          if (throwOnError) {
+            throw error;
+          }
 
           if (isAxiosError) {
             const isNotModifiedResponse = error.response
@@ -304,9 +313,6 @@ const middleware = (middlewareOptions) => {
               error.stack = stack;
             }
           }
-
-          // Remove call from callStack when finished
-          callStack.removeFromStack(REQUEST);
 
           if (error instanceof ResponseNotModified) {
             const cb = ETagCallback;
@@ -330,9 +336,11 @@ const middleware = (middlewareOptions) => {
           }
 
           if (middlewareOpts.warnOnCancellation && axios.isCancel(error)) {
-            console.warn(error.message);
+            // eslint-disable-next-line no-unused-expressions
+            !shouldThrow && console.warn(error.message);
           } else {
-            console.error(axios.isCancel(error) ? error.message : error);
+            // eslint-disable-next-line no-unused-expressions
+            !shouldThrow && console.error(axios.isCancel(error) ? error.message : error);
           }
 
           return undefined;

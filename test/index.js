@@ -101,6 +101,7 @@ describe('shapeshifter middleware', () => {
       emitRequestType: false,
       useFullResponseObject: false,
       warnOnCancellation: false,
+      throwOnError: false,
     });
   });
 
@@ -149,6 +150,7 @@ describe('shapeshifter middleware', () => {
         emitRequestType: false,
         useFullResponseObject: false,
         warnOnCancellation: false,
+        throwOnError: false,
       },
     );
     mock.verify();
@@ -931,6 +933,36 @@ describe('shapeshifter middleware', () => {
         'call',
         'FETCH_USER',
       );
+    });
+
+    it('throws error on middleware.throwOnError = true', () => {
+      setupMiddleware({ throwOnError: true });
+      stubApiResponse({ data: { name: 'Alejandro' }, status: 404 });
+      const action = {
+        ...createApiAction('FETCH_USER'),
+        payload: () => ({
+          url: '/users/fetch',
+        }),
+      };
+
+      return dispatch(action).catch((error) => {
+        chai.assert.instanceOf(error, ResponseWithBadStatusCode);
+      });
+    });
+
+    it('throws error on ACTION.throwOnError = true', () => {
+      stubApiResponse({ data: { name: 'Alejandro' }, status: 404 });
+      const action = {
+        ...createApiAction('FETCH_USER'),
+        payload: () => ({
+          url: '/users/fetch',
+          throwOnError: true,
+        }),
+      };
+
+      return dispatch(action).catch((error) => {
+        chai.assert.instanceOf(error, ResponseWithBadStatusCode);
+      });
     });
 
     it('should cancel call and warn', async () => {
