@@ -75,6 +75,10 @@ export default (opts = {}) => {
     addError('warnOnCancellation', 'Boolean', opts.warnOnCancellation);
   }
 
+  if (!defined(opts.throwOnError, Boolean)) {
+    addError('throwOnError', 'Boolean', opts.throwOnError);
+  }
+
   if (!optional(opts.axios, Object)) {
     addError('axios', 'Object', opts.axios);
   }

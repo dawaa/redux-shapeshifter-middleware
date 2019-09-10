@@ -15,4 +15,5 @@ export default {
   useETags: false,
   useFullResponseObject: false,
   warnOnCancellation: false,
+  throwOnError: false,
 };
