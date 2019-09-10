@@ -3,6 +3,11 @@
 ## [Unreleased]
 Future stuff...
 
+## [1.3.0] - 2019-09-10
+### Added
+- New middleware option `middleware.throwOnError` that will throw the errors from within `shapeshifter` and let the user manually handle them. Setting this to `true` will affect all `shapeshifter`-actions.
+- New ACTION option `ACTION.payload.throwOnError` that will throw any error resulting from the specific action dispatched and let the user manually handle it.
+
 ## [1.2.0] - 2019-08-31
 ### Added
 - New middleware option `middleware.axios` that allows for global configuration of all shapeshifter actions. However `ACTION.axios` will override any property set through the middleware set up with the same name.
@@ -70,7 +75,8 @@ Future stuff...
 - Swallowing errors. Added test case that checks if e.g. a `SyntaxError` after `success()` has been called and logs the error. At the same time we shouldn't call `failure()` neither call `dispatch()` in the `.catch()`-handler
 - Added test case that ensures if response is `304` ("Not Modified") that we won't call `dispatch()` and that we won't log it as an error
 
-[Unreleased]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.2.0...head
+[Unreleased]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.3.0...head
+[1.3.0]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.0.1...v1.1.0
