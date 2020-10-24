@@ -17,11 +17,11 @@
   },
   "license": "MIT",
   "scripts": {
-    "prepublish": "yarn run lint --max-warnings=0 && yarn run test:all && yarn run build:babel",
+    "prepublish": "npm run lint --max-warnings=0 && npm run test:all && npm run build:babel",
     "test": "cross-env NODE_ENV=test nyc mocha",
     "test:all": "cross-env NODE_ENV=test nyc mocha \"test/**/*.js\"",
     "test:debug": "mocha --inspect test/*.js",
-    "test:watch": "yarn run test:all --watch",
+    "test:watch": "npm run test:all --watch",
     "lint": "eslint .",
     "build:babel": "rimraf ./lib && babel src --out-dir lib --copy-files"
   },
