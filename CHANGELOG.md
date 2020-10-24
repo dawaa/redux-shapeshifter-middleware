@@ -3,6 +3,14 @@
 ## [Unreleased]
 Future stuff...
 
+## [1.3.3] - 2020-10-24
+### Changed
+- Updated all dependencies
+- Moved from `yarn` to `npm`.
+
+### Fixed
+- Security issues
+
 ## [1.3.2] - 2020-10-24
 ### Fixed
 - Remove `npm` dependency in order to resolve security issues.
@@ -83,7 +91,8 @@ Future stuff...
 - Swallowing errors. Added test case that checks if e.g. a `SyntaxError` after `success()` has been called and logs the error. At the same time we shouldn't call `failure()` neither call `dispatch()` in the `.catch()`-handler
 - Added test case that ensures if response is `304` ("Not Modified") that we won't call `dispatch()` and that we won't log it as an error
 
-[Unreleased]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.3.2...head
+[Unreleased]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.3.3...head
+[1.3.3]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.2.0...v1.3.0
