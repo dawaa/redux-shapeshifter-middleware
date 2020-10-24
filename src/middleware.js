@@ -79,9 +79,7 @@ const middleware = (middlewareOptions) => {
       // eslint-disable-next-line no-param-reassign
       action.payload = payload;
 
-
       // Everything is OK
-
 
       const {
         method = 'get',

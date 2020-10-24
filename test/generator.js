@@ -4,7 +4,6 @@ import chai from 'chai';
 // internal
 import { GeneratorFunction, isGeneratorFn } from '../src/generator';
 
-
 describe('Generator helper', () => {
   it('Should check GeneratorFunction', () => {
     chai.assert.strictEqual(GeneratorFunction.displayName, 'GeneratorFunction');
