@@ -57,7 +57,6 @@ const setupMiddleware = (opts = defaultConfig) => {
   dispatch = (action) => middleware(store)(next)(action);
 };
 
-
 const stubApiResponse = (payload) => sandbox.stub(axios, 'request').resolves(payload);
 
 describe('shapeshifter middleware', () => {
@@ -657,7 +656,6 @@ describe('shapeshifter middleware', () => {
 
     await dispatch(action);
     await flushPromises();
-
 
     assert.isTrue(spy.calledOnce);
     assert.deepEqual(
@@ -1803,7 +1801,6 @@ describe('shapeshifter middleware', () => {
         chai.assert.isTrue(spy.called);
         chai.assert.deepEqual(spy.args[0], expected);
       });
-
 
       it('Dispatch basic user firstName', async () => {
         const stub = stubApiResponse({
