@@ -3,6 +3,10 @@
 ## [Unreleased]
 Future stuff...
 
+## [1.3.4] - 2020-10-24
+### Changed
+- Renamed key `prepublish` to `prepare` in `package.json` in order to keep same behavior and prepare for future removal of the `prepublish` script.
+
 ## [1.3.3] - 2020-10-24
 ### Changed
 - Updated all dependencies
@@ -91,7 +95,8 @@ Future stuff...
 - Swallowing errors. Added test case that checks if e.g. a `SyntaxError` after `success()` has been called and logs the error. At the same time we shouldn't call `failure()` neither call `dispatch()` in the `.catch()`-handler
 - Added test case that ensures if response is `304` ("Not Modified") that we won't call `dispatch()` and that we won't log it as an error
 
-[Unreleased]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.3.3...head
+[Unreleased]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.3.4...head
+[1.3.4]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/dawaa/redux-shapeshifter-middleware/compare/v1.3.0...v1.3.1
