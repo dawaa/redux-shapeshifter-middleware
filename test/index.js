@@ -1070,6 +1070,30 @@ describe('shapeshifter middleware', () => {
         assert.isTrue(store.dispatch.calledWith(expectedAction));
         mock.verify();
       });
+
+      it('Emits failed type on axios error', async () => {
+        const mock = sandbox.mock(console).expects('error').once();
+        const spy = sandbox.spy();
+
+        const action = {
+          ...createApiAction('FETCH_USER'),
+          payload: () => ({
+            url: '/users/fetch',
+          }),
+          failure: spy,
+        };
+
+        const expectedAction = {
+          type: 'API_ERROR',
+          message: 'FETCH_USER_FAILED failed.',
+          error: sinon.match.instanceOf(Object),
+        };
+
+        await assert.isFulfilled(dispatch(action));
+        assert.isTrue(store.dispatch.called);
+        assert.isTrue(store.dispatch.calledWith(expectedAction));
+        mock.verify();
+      });
     });
 
     describe('Successful API calls, returning errors', () => {
