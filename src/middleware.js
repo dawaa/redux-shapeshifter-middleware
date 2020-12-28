@@ -296,6 +296,7 @@ const middleware = (middlewareOptions) => {
           callStack.removeFromStack(REQUEST);
 
           if (throwOnError) {
+            dispatch(failure(FAILURE, error));
             throw error;
           }
 
